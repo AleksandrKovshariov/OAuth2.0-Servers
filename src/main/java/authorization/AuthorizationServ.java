@@ -1,11 +1,12 @@
 package authorization;
 
-import static constants.ServerConstants.*;
+import static utils.ServerConstants.*;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.apache.commons.codec.binary.Base64;
 import org.json.JSONObject;
+import utils.Http;
 
 import java.io.*;
 import java.net.Socket;
@@ -74,61 +75,10 @@ public class AuthorizationServ implements Runnable{
         this.client = client;
     }
 
-    private static void closeAll(Closeable... streams) throws IOException{
-        for(Closeable i : streams)
-            i.close();
-    }
-
-    public String readLine(InputStream inputStream) throws IOException{
-        StringBuilder sb = new StringBuilder();
-        while(true){
-            int c = inputStream.read();
-            if(c == '\n' || c == -1)
-                break;
-
-            sb.append((char)c);
-        }
-        return sb.toString();
-    }
-
-    public static byte[] readBodyBytes(InputStream rawI, int size) throws IOException{
-        byte[] bytes = new byte[size];
-        int bytesRead = 0;
-        while(bytesRead < size) {
-            int result = rawI.read(bytes, bytesRead, size - bytesRead);
-            if(result == -1) break;
-            bytesRead += result;
-        }
-        return bytes;
-    }
-
-    private static Map<String, String> parseJSONBody(byte[] bytes){
-        String body = new String(bytes);
-
-        String[] tokens = body.split("&");
-
-        Map<String, String> mapBody = new HashMap<>();
-
-        for (String token : tokens) {
-            String[] keyVal = token.split("=");
-            if(keyVal.length > 1) {
-                mapBody.put(keyVal[0], keyVal[1]);
-            }
-        }
-
-        return mapBody;
-    }
 
     private static boolean containsAll(Map<String, String> map){
         return map.containsKey("password") && map.containsKey("username") && map.containsKey("grant_type")
                 && map.containsKey("client_secret") && map.containsKey("client_id");
-    }
-
-    private static void writeJSONResponse(Writer writer, String json) throws IOException{
-        writer.write(CONTENT_TYPE + "application/json" + NEW_LINE);
-        writer.write(CONTENT_LENGTH + json.getBytes(StandardCharsets.UTF_8).length + NEW_LINE + NEW_LINE);
-        writer.write(json);
-        writer.flush();
     }
 
     private boolean authenticateUser(String userName, String password){
@@ -143,65 +93,36 @@ public class AuthorizationServ implements Runnable{
     }
 
     private void auth(Writer writer, InputStream input) throws IOException{
-        Map<String, String> header = readHeaderByte(input);
+        Map<String, String> header = Http.readHeaderByte(input);
 
         //validate
         String content = header.get("Content-Length");
         //catch ex
         int contentLength = Integer.parseInt(content);
 
-        byte[] bytes = readBodyBytes(input, contentLength);
-        Map<String, String> map = parseJSONBody(bytes);
+        byte[] bytes = Http.readBodyBytes(input, contentLength);
+        Map<String, String> map = Http.parseJSONBody(bytes);
 
         if(!containsAll(map)){
             logger.log(Level.CONFIG, "Invalid request");
             writer.write(ERROR400);
-            writeJSONResponse(writer, INVALID_REQUEST);
+            Http.writeJSONResponse(writer, INVALID_REQUEST);
         }else if(!authenticateUser(map.get("username"), map.get("password"))){
             logger.log(Level.FINE, "Authentication failed");
             writer.write(UNAUTHORIZED);
-            writeJSONResponse(writer, UNAUTHORIZED);
+            Http.writeJSONResponse(writer, UNAUTHORIZED);
         }else{
             logger.log(Level.FINER, "Sent OK");
             String token = generateToken();
             System.out.println(token);
             writer.write(OK);
-            writeJSONResponse(writer,
+            Http.writeJSONResponse(writer,
                     new JSONObject().put("access_token", token)
                     .put("token_type", "bearer").toString());
 
         }
 
 
-    }
-
-    private static Map<String, String> readHeaderByte(InputStream rawI) throws IOException{
-
-        Map<String, String> headerMap = new HashMap<>();
-        int c;
-        StringBuilder lineBuilder = new StringBuilder();
-
-        while (true){
-
-            while ((c = rawI.read()) != '\n'){
-                if(c == -1)
-                    break;
-                if(c == '\r')
-                    continue;
-                lineBuilder.append((char)c);
-            }
-            String line = lineBuilder.toString();
-
-            if(line.isEmpty())
-                break;
-
-            String[] keyVal = line.split(": ");
-            if(keyVal.length > 1) {
-                headerMap.put(keyVal[0], keyVal[1]);
-            }
-            lineBuilder.setLength(0);
-        }
-        return headerMap;
     }
 
     @Override
@@ -212,7 +133,7 @@ public class AuthorizationServ implements Runnable{
             Writer writer = new OutputStreamWriter(rawO, StandardCharsets.UTF_8);
             InputStream rawI = client.getInputStream();
 
-            String requestLine = readLine(rawI);
+            String requestLine = Http.readLine(rawI);
             System.out.println("Request: " + requestLine);
             String[] tokens = requestLine.split("\\s+" );
 
@@ -220,7 +141,9 @@ public class AuthorizationServ implements Runnable{
                 auth(writer, rawI);
             }else
                 writer.write(NOT_IMPLEMENTED);
-            closeAll(writer, rawO, rawI);
+            writer.close();
+            rawO.close();
+            rawI.close();
 
         }catch (RuntimeException e){
             logger.log(Level.SEVERE, "RUNTIME EXCEPTION", e);
