@@ -1,6 +1,7 @@
 package resource;
 
 import authorization.AuthorizationServ;
+import utils.FineLogger;
 import utils.Http;
 
 import java.io.*;
@@ -14,21 +15,10 @@ import static utils.ServerConstants.NOT_IMPLEMENTED;
 
 public class ResourceServ implements Runnable{
     private Socket client;
-    private static Logger logger = Logger.getLogger(AuthorizationServ.class.getName());
-
-    static{
-        initLogger();
-    }
+    private static Logger logger = FineLogger.getLogger(AuthorizationServ.class.getName());
 
     public ResourceServ(Socket client) {
         this.client = client;
-    }
-    private static void initLogger(){
-        ConsoleHandler handler = new ConsoleHandler();
-        handler.setLevel(Level.ALL);
-        logger.addHandler(handler);
-        logger.setLevel(Level.FINE);
-        logger.setUseParentHandlers(false);
     }
 
     @Override

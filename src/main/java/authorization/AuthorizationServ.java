@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import org.apache.commons.codec.binary.Base64;
 import org.json.JSONObject;
+import utils.FineLogger;
 import utils.Http;
 
 import java.io.*;
@@ -25,28 +26,16 @@ import java.util.logging.Logger;
 
 
 public class AuthorizationServ implements Runnable{
-    private static Logger logger = Logger.getLogger(AuthorizationServ.class.getName());
+    private static Logger logger = FineLogger.getLogger(AuthorizationServ.class.getName());
     private static final String INVALID_REQUEST = new JSONObject().put("error", "invalid_request").toString();
     private static final String UNAUTHORIZED = new JSONObject().put("error", "access_denied").toString();
     private static final Path PRIVATE_KEY_PATH
             = Paths.get("src", "main", "java", "authorization", "private_pcks8");
-    private static PrivateKey privateKey;
+    private static PrivateKey privateKey = initPrivateKey();
     private Socket client;
 
-    static{
-        initLogger();
-        initPrivateKey();
-    }
 
-    private static void initLogger(){
-        ConsoleHandler handler = new ConsoleHandler();
-        handler.setLevel(Level.ALL);
-        logger.addHandler(handler);
-        logger.setLevel(Level.FINE);
-        logger.setUseParentHandlers(false);
-    }
-
-    private static void initPrivateKey(){
+    private static PrivateKey initPrivateKey(){
         try {
             String privateKeyString;
             privateKeyString = new String(Files.readAllBytes(PRIVATE_KEY_PATH), StandardCharsets.UTF_8);
@@ -61,7 +50,8 @@ public class AuthorizationServ implements Runnable{
             try {
 
                 KeyFactory kf = KeyFactory.getInstance("RSA");
-                privateKey = kf.generatePrivate(keySpec);
+                PrivateKey privateKey = kf.generatePrivate(keySpec);
+                return privateKey;
             }catch (Exception e){
                 logger.log(Level.WARNING, "Key exception", e);
             }
@@ -69,6 +59,7 @@ public class AuthorizationServ implements Runnable{
         }catch (IOException e){
             logger.log(Level.WARNING, "Can't load private key", e);
         }
+        return null;
     }
 
     public AuthorizationServ(Socket client){
