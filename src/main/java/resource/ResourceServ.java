@@ -60,22 +60,36 @@ public class ResourceServ implements Runnable{
                 .toString());
     }
 
-    private boolean verifyToken(Writer writer, InputStream input) throws IOException{
-        String token = getToken(input);
+
+    private boolean verifyToken(Writer writer, String token) throws IOException{
 
         if(token == null){
             writer.write(ERROR400);
-            Http.writeJSONResponse(writer,
-                    new JSONObject().put("error", "Access token does not exist.").toString());
+            Http.writeJSONResponse(writer, new JSONObject().put("error", "Access token does not exist.").toString());
             return false;
         }
-        else if(!tokenIsValid(token)){
+        DecodedJWT decodedJWT = JWT.decode(token);
+        String username = decodedJWT.getClaim("username").asString();
+        if(!tokenIsValid(decodedJWT) || username == null){
             writer.write(ERROR400);
             Http.writeJSONResponse(writer, new JSONObject().put("error", "Access token is invalid.").toString());
             return false;
         }
 
         return true;
+    }
+
+    private boolean verifyAccess(Writer writer, InputStream inputStream, String path) throws IOException{
+        Map<String, String> header = Http.readHeaderByte(inputStream);
+        String token = getToken(header);
+        if(!verifyToken(writer, token))
+            return false;
+        //token can't be null because of token verification above
+        String username = JWT.decode(token).getClaim("username").asString();
+        System.out.println(username);
+        System.out.println(path);
+        return true;
+
     }
     @Override
     public void run() {
@@ -89,9 +103,17 @@ public class ResourceServ implements Runnable{
             System.out.println("Request: " + requestLine);
             String[] tokens = requestLine.split("\\s+" );
 
-            if(tokens[0].equals("GET") && verifyToken(writer, rawI)){
-                doGet(writer, rawO);
+            if(!verifyAccess(writer, rawI, tokens[1])){
+                writer.write(FORBIDDEN);
+                writer.flush();
             }
+            else if(tokens[0].equals("GET"))
+                doGet(writer, rawO);
+            else{
+                writer.write(NOT_IMPLEMENTED);
+                writer.flush();
+            }
+
             writer.close();
             rawO.close();
             rawI.close();
@@ -111,9 +133,7 @@ public class ResourceServ implements Runnable{
         }
     }
 
-    private String getToken(InputStream rawI) throws IOException {
-        Map<String, String> header = Http.readHeaderByte(rawI);
-        System.out.println(header);
+    private String getToken(Map<String, String> header) throws IOException {
         if(header.containsKey("Authorization")){
             return header.get("Authorization").replace("Bearer", "")
                     .replaceAll("\\s", "");
@@ -121,10 +141,9 @@ public class ResourceServ implements Runnable{
         return null;
     }
 
-    private boolean tokenIsValid(String token){
-        DecodedJWT decodedJWT = JWT.decode(token);
+    private boolean tokenIsValid(DecodedJWT decodedToken){
         try {
-            ALGORITHM.verify(decodedJWT);
+            ALGORITHM.verify(decodedToken);
         }catch (SignatureVerificationException e){
             return false;
         }

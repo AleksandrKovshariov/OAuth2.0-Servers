@@ -3,6 +3,7 @@ package utils;
 public class ServerConstants {
 
     public static final String OK = "HTTP/1.1 200 OK\r\n";
+    public static final String FORBIDDEN = "HTTP/1.1 403 Forbidden\r\n";
     public static final String UNAUTHORIZED = "HTTP/1.1 401 Unauthorized\r\n";
     public static final String OPERATION_NOT_SUPPORTED = "HTTP/1.1 505 HTTP Version Not Supported\r\n";
     public static final String NOT_IMPLEMENTED = "HTTP/1.1 501 Not Implemented\r\n";

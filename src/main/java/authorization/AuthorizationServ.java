@@ -50,8 +50,7 @@ public class AuthorizationServ implements Runnable{
             try {
 
                 KeyFactory kf = KeyFactory.getInstance("RSA");
-                PrivateKey privateKey = kf.generatePrivate(keySpec);
-                return privateKey;
+                return kf.generatePrivate(keySpec);
             }catch (Exception e){
                 logger.log(Level.WARNING, "Key exception", e);
             }
@@ -76,9 +75,10 @@ public class AuthorizationServ implements Runnable{
         return true;
     }
 
-    private String generateToken(){
+    private String generateToken(String username){
         Claims claims = Jwts.claims();
         claims.put("iss", "sample-auth-server");
+        claims.put("username", username);
 
         return  Jwts.builder().setClaims(claims).signWith(SignatureAlgorithm.RS256, privateKey).compact();
     }
@@ -104,7 +104,7 @@ public class AuthorizationServ implements Runnable{
             Http.writeJSONResponse(writer, UNAUTHORIZED);
         }else{
             logger.log(Level.FINER, "Sent OK");
-            String token = generateToken();
+            String token = generateToken(map.get("username"));
             System.out.println(token);
             writer.write(OK);
             Http.writeJSONResponse(writer,
