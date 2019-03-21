@@ -59,6 +59,24 @@ public class ResourceServ implements Runnable{
                 new JSONObject().put("username", "JO").put("email", "asdf").toString())
                 .toString());
     }
+
+    private boolean verifyToken(Writer writer, InputStream input) throws IOException{
+        String token = getToken(input);
+
+        if(token == null){
+            writer.write(ERROR400);
+            Http.writeJSONResponse(writer,
+                    new JSONObject().put("error", "Access token does not exist.").toString());
+            return false;
+        }
+        else if(!tokenIsValid(token)){
+            writer.write(ERROR400);
+            Http.writeJSONResponse(writer, new JSONObject().put("error", "Access token is invalid.").toString());
+            return false;
+        }
+
+        return true;
+    }
     @Override
     public void run() {
 
@@ -71,18 +89,7 @@ public class ResourceServ implements Runnable{
             System.out.println("Request: " + requestLine);
             String[] tokens = requestLine.split("\\s+" );
 
-            String token = getToken(rawI);
-            if(token == null){
-                writer.write(ERROR400);
-                Http.writeJSONResponse(writer,
-                        new JSONObject().put("error", "Access token does not exist.").toString());
-            }
-            if(!tokenIsValid(token)){
-                writer.write(ERROR400);
-                Http.writeJSONResponse(writer, new JSONObject().put("error", "Access token is invalid.").toString());
-            }
-
-            if(tokens[0].equals("GET")){
+            if(tokens[0].equals("GET") && verifyToken(writer, rawI)){
                 doGet(writer, rawO);
             }
             writer.close();
@@ -114,7 +121,7 @@ public class ResourceServ implements Runnable{
         return null;
     }
 
-    private boolean tokenIsValid(String token) throws IOException {
+    private boolean tokenIsValid(String token){
         DecodedJWT decodedJWT = JWT.decode(token);
         try {
             ALGORITHM.verify(decodedJWT);
