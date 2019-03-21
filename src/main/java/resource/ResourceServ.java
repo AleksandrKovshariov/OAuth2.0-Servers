@@ -1,6 +1,9 @@
 package resource;
 
-import authorization.AuthorizationServ;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.SignatureVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import org.json.JSONObject;
 import utils.FineLogger;
 import utils.Http;
@@ -9,17 +12,40 @@ import static utils.ServerConstants.*;
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
+import java.security.interfaces.RSAPublicKey;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Map;
-import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static utils.ServerConstants.NOT_IMPLEMENTED;
-
 public class ResourceServ implements Runnable{
     private Socket client;
-    private static Logger logger = FineLogger.getLogger(AuthorizationServ.class.getName());
+    private static Logger logger = FineLogger.getLogger(ResourceServ.class.getName());
+    private static final PublicKey PUBLIC_KEY = loadPublicKey();
+    private static final Algorithm ALGORITHM = Algorithm.RSA256((RSAPublicKey)PUBLIC_KEY, null);
+
+    private static PublicKey loadPublicKey() {
+        try {
+            byte[] keyBytes = Files.readAllBytes(Paths.get("src", "main", "java", "resource", "public_der"));
+            X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
+            try {
+                KeyFactory kf = KeyFactory.getInstance("RSA");
+                return kf.generatePublic(spec);
+            }catch (NoSuchAlgorithmException | InvalidKeySpecException e){
+                logger.log(Level.WARNING, "Wrong public key", e);
+            }
+
+        }catch (IOException e){
+            logger.log(Level.WARNING, "Public key does not exist", e);
+        }
+        return null;
+    }
 
     public ResourceServ(Socket client) {
         this.client = client;
@@ -50,6 +76,10 @@ public class ResourceServ implements Runnable{
                 writer.write(ERROR400);
                 Http.writeJSONResponse(writer,
                         new JSONObject().put("error", "Access token does not exist.").toString());
+            }
+            if(!tokenIsValid(token)){
+                writer.write(ERROR400);
+                Http.writeJSONResponse(writer, new JSONObject().put("error", "Access token is invalid.").toString());
             }
 
             if(tokens[0].equals("GET")){
@@ -84,7 +114,14 @@ public class ResourceServ implements Runnable{
         return null;
     }
 
-    private boolean tokenIsValid() {
+    private boolean tokenIsValid(String token) throws IOException {
+        DecodedJWT decodedJWT = JWT.decode(token);
+        try {
+            ALGORITHM.verify(decodedJWT);
+        }catch (SignatureVerificationException e){
+            return false;
+        }
+
         return true;
     }
 }

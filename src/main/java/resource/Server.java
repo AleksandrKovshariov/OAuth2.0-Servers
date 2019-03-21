@@ -44,7 +44,7 @@ public class Server {
 
         try(ServerSocket serverSocket = new ServerSocket(port, query, address)){
 
-            requests.fine("authorization.Server started on port "
+            requests.fine(ResourceServ.class.getName() + " started on port " +
                     + serverSocket.getLocalPort() + " address: " + serverSocket.getInetAddress());
 
             while (true){
