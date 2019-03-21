@@ -8,6 +8,9 @@ import java.util.logging.Logger;
 
 public class FineLogger{
 
+    private FineLogger(){
+
+    }
     public static Logger getLogger(String name){
         Logger logger = Logger.getLogger(name);
         ConsoleHandler handler = new ConsoleHandler();

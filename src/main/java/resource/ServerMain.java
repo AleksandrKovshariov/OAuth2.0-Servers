@@ -26,7 +26,7 @@ public class ServerMain {
         int port = 0;
 
         if(args.length == 0)
-            port = 6789;
+            port = 6790;
         else if(args.length == 1)
             port = parsePort(args[0]);
 

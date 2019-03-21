@@ -1,12 +1,16 @@
 package resource;
 
 import authorization.AuthorizationServ;
+import org.json.JSONObject;
 import utils.FineLogger;
 import utils.Http;
+import static utils.ServerConstants.*;
 
 import java.io.*;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -21,6 +25,14 @@ public class ResourceServ implements Runnable{
         this.client = client;
     }
 
+
+    private void doGet(Writer writer, OutputStream output) throws IOException{
+        System.out.println("GET handler");
+        writer.write(OK);
+        Http.writeJSONResponse(writer, new JSONObject().put("results",
+                new JSONObject().put("username", "JO").put("email", "asdf").toString())
+                .toString());
+    }
     @Override
     public void run() {
 
@@ -32,6 +44,17 @@ public class ResourceServ implements Runnable{
             String requestLine = Http.readLine(rawI);
             System.out.println("Request: " + requestLine);
             String[] tokens = requestLine.split("\\s+" );
+
+            String token = getToken(rawI);
+            if(token == null){
+                writer.write(ERROR400);
+                Http.writeJSONResponse(writer,
+                        new JSONObject().put("error", "Access token does not exist.").toString());
+            }
+
+            if(tokens[0].equals("GET")){
+                doGet(writer, rawO);
+            }
             writer.close();
             rawO.close();
             rawI.close();
@@ -49,5 +72,19 @@ public class ResourceServ implements Runnable{
                 logger.log(Level.WARNING, "Can't close socket for " + client.getInetAddress(), ex);
             }
         }
+    }
+
+    private String getToken(InputStream rawI) throws IOException {
+        Map<String, String> header = Http.readHeaderByte(rawI);
+        System.out.println(header);
+        if(header.containsKey("Authorization")){
+            return header.get("Authorization").replace("Bearer", "")
+                    .replaceAll("\\s", "");
+        }
+        return null;
+    }
+
+    private boolean tokenIsValid() {
+        return true;
     }
 }
