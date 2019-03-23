@@ -1,6 +1,7 @@
 package resource;
 
 import authorization.AuthorizationServ;
+import database.Database;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -49,15 +50,10 @@ public class Server {
     public void start(){
         ExecutorService service = Executors.newFixedThreadPool(NUMBER_OF_THREADS);
 
-        Connection connection = null;
-        try {
-           connection = DriverManager.getConnection(url, username, password);
-        }catch (SQLException ex){
-            errorLog.log(Level.SEVERE, "Database connection error", ex);
-        }
 
         try(ServerSocket serverSocket = new ServerSocket(port, query, address)){
-
+            Connection connection = DriverManager.getConnection(url, username, password);
+            Database database = new Database(connection);
             requests.fine(ResourceServ.class.getName() + " started on port " +
                     + serverSocket.getLocalPort() + " address: " + serverSocket.getInetAddress());
 
@@ -65,7 +61,7 @@ public class Server {
                 try {
                     Socket client = serverSocket.accept();
                     requests.fine("Client " + client.getInetAddress() + " connected");
-                    Runnable requestFile = new ResourceServ(client, connection);
+                    Runnable requestFile = new ResourceServ(client, database::hasAccess);
                     service.submit(requestFile);
                 }catch (IOException ex){
                     requests.log(Level.CONFIG, "Client disconnected", ex);
@@ -74,6 +70,9 @@ public class Server {
 
         }catch (IOException ex){
             errorLog.log(Level.SEVERE, "Error init server socket", ex);
+        }catch (SQLException ex){
+            errorLog.log(Level.SEVERE, "Can't connect to database");
         }
+
     }
 }

@@ -23,16 +23,16 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.sql.Connection;
 import java.util.Map;
+import java.util.function.BiPredicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ResourceServ implements Runnable{
     private Socket client;
+    private BiPredicate<String, String> accessVerifier;
     private static Logger logger = FineLogger.getLogger(ResourceServ.class.getName());
     private static final PublicKey PUBLIC_KEY = loadPublicKey();
     private static final Algorithm ALGORITHM = Algorithm.RSA256((RSAPublicKey)PUBLIC_KEY, null);
-    private Connection DBConnection;
-
 
     private static PublicKey loadPublicKey() {
         try {
@@ -51,9 +51,9 @@ public class ResourceServ implements Runnable{
         return null;
     }
 
-    public ResourceServ(Socket client, Connection connection) {
+    public ResourceServ(Socket client, BiPredicate<String, String> accessVerifier) {
         this.client = client;
-        this.DBConnection = connection;
+        this.accessVerifier = accessVerifier;
     }
 
 
@@ -93,9 +93,7 @@ public class ResourceServ implements Runnable{
         String username = JWT.decode(token).getClaim("username").asString();
         System.out.println(username);
         System.out.println(path);
-        Database db = new Database(DBConnection);
-
-        db.hasAccess(username, path);
+        accessVerifier.test(username, path);
         return true;
 
     }
