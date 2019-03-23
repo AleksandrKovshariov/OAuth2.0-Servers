@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.ConsoleHandler;
@@ -20,6 +23,10 @@ public class Server {
     private static Logger errorLog = Logger.getLogger("Error");
     private static Logger requests = Logger.getLogger("Requests");
 
+
+    public String url = "jdbc:mysql://localhost:3306/mydb";
+    public String username = "resource";
+    public String password = "cfif";
     public static final int NUMBER_OF_THREADS = 10;
 
     static{
@@ -42,6 +49,13 @@ public class Server {
     public void start(){
         ExecutorService service = Executors.newFixedThreadPool(NUMBER_OF_THREADS);
 
+        Connection connection = null;
+        try {
+           connection = DriverManager.getConnection(url, username, password);
+        }catch (SQLException ex){
+            errorLog.log(Level.SEVERE, "Database connection error", ex);
+        }
+
         try(ServerSocket serverSocket = new ServerSocket(port, query, address)){
 
             requests.fine(ResourceServ.class.getName() + " started on port " +
@@ -51,7 +65,7 @@ public class Server {
                 try {
                     Socket client = serverSocket.accept();
                     requests.fine("Client " + client.getInetAddress() + " connected");
-                    Runnable requestFile = new ResourceServ(client);
+                    Runnable requestFile = new ResourceServ(client, connection);
                     service.submit(requestFile);
                 }catch (IOException ex){
                     requests.log(Level.CONFIG, "Client disconnected", ex);

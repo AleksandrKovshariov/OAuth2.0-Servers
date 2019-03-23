@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import database.Database;
 import org.json.JSONObject;
 import utils.FineLogger;
 import utils.Http;
@@ -20,6 +21,7 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.sql.Connection;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -29,6 +31,8 @@ public class ResourceServ implements Runnable{
     private static Logger logger = FineLogger.getLogger(ResourceServ.class.getName());
     private static final PublicKey PUBLIC_KEY = loadPublicKey();
     private static final Algorithm ALGORITHM = Algorithm.RSA256((RSAPublicKey)PUBLIC_KEY, null);
+    private Connection DBConnection;
+
 
     private static PublicKey loadPublicKey() {
         try {
@@ -47,8 +51,9 @@ public class ResourceServ implements Runnable{
         return null;
     }
 
-    public ResourceServ(Socket client) {
+    public ResourceServ(Socket client, Connection connection) {
         this.client = client;
+        this.DBConnection = connection;
     }
 
 
@@ -88,6 +93,9 @@ public class ResourceServ implements Runnable{
         String username = JWT.decode(token).getClaim("username").asString();
         System.out.println(username);
         System.out.println(path);
+        Database db = new Database(DBConnection);
+
+        db.hasAccess(username, path);
         return true;
 
     }
