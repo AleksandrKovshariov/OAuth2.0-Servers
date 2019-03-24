@@ -21,7 +21,7 @@ public class ServerMain {
         return isPortCorrect(port) ? port : -1;
     }
 
-    public static void main(String[] args) throws IOException
+    public static void main(String[] args)
     {
         int port = 0;
 

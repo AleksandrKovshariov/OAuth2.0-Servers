@@ -54,6 +54,7 @@ public class Server {
         try(ServerSocket serverSocket = new ServerSocket(port, query, address)){
             Connection connection = DriverManager.getConnection(url, username, password);
             Database database = new Database(connection);
+
             requests.fine(ResourceServ.class.getName() + " started on port " +
                     + serverSocket.getLocalPort() + " address: " + serverSocket.getInetAddress());
 

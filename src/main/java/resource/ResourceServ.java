@@ -22,6 +22,7 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 import java.sql.Connection;
+import java.sql.SQLOutput;
 import java.util.Map;
 import java.util.function.BiPredicate;
 import java.util.logging.Level;
@@ -74,8 +75,8 @@ public class ResourceServ implements Runnable{
             return false;
         }
         DecodedJWT decodedJWT = JWT.decode(token);
-        String username = decodedJWT.getClaim("username").asString();
-        if(!tokenIsValid(decodedJWT) || username == null){
+
+        if(!tokenIsValid(decodedJWT)){
             writer.write(ERROR400);
             Http.writeJSONResponse(writer, new JSONObject().put("error", "Access token is invalid.").toString());
             return false;
@@ -91,8 +92,9 @@ public class ResourceServ implements Runnable{
             return false;
         //token can't be null because of token verification above
         String username = JWT.decode(token).getClaim("username").asString();
-        System.out.println(username);
-        System.out.println(path);
+        System.out.println("Got a username: " + username);
+        System.out.println("Requested object: " + path);
+        System.out.println("Database: ");
         accessVerifier.test(username, path);
         return true;
 
@@ -154,6 +156,8 @@ public class ResourceServ implements Runnable{
             return false;
         }
 
-        return true;
+
+        return decodedToken.getClaim("username").asString() != null
+                && decodedToken.getClaim("iss").asString().equals("sample-auth-server");
     }
 }
