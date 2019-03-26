@@ -25,6 +25,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 public class ResourceServ implements Runnable{
     private Socket client;
@@ -55,13 +56,40 @@ public class ResourceServ implements Runnable{
         this.accessVerifier = accessVerifier;
     }
 
+    private String formJsonFile(Path path){
+        long lastModified = 0;
+        long size = 0;
+        try {
+            lastModified = Files.getLastModifiedTime(path).toMillis();
+            size = Files.size(path);
+        }catch (IOException e){
+            logger.log(Level.CONFIG, "Error getting file info", e);
+        }
+
+        String fileName = path.getFileName().toString();
+
+        return new JSONObject()
+                .put("name", fileName)
+                .put("size", size)
+                .put("modified", lastModified)
+                .toString();
+    }
+    private void sendDirectoryStructure(Writer writer, Path path) throws IOException{
+        JSONObject jsonObject = new JSONObject();
+        try(Stream<Path> paths = Files.walk(path)){
+            paths.skip(1).forEach(x -> jsonObject.append("files", formJsonFile(x)));
+        }
+        writer.write(OK);
+        writer.write("Type: directory" + NEW_LINE);
+        Http.writeJSONResponse(writer, jsonObject.toString());
+
+    }
 
     private void doGet(Writer writer, OutputStream output, Path path) throws IOException{
         System.out.println(path);
         System.out.println(Files.exists(path));
         if(Files.isDirectory(path)){
-            writer.write(OK);
-            writer.flush();
+           sendDirectoryStructure(writer, path);
         }else{
             String contentType = URLConnection.getFileNameMap().getContentTypeFor(path.getFileName().toString());
             sendFile(writer, output, contentType, path);
