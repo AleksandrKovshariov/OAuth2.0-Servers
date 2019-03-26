@@ -11,8 +11,10 @@ import static utils.ServerConstants.*;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
@@ -26,7 +28,7 @@ import java.util.logging.Logger;
 
 public class ResourceServ implements Runnable{
     private Socket client;
-    private Access accessVerifier;
+    private Access<String, String> accessVerifier;
     private static Logger logger = FineLogger.getLogger(ResourceServ.class.getName());
     private static final PublicKey PUBLIC_KEY = loadPublicKey();
     private static final Algorithm ALGORITHM = Algorithm.RSA256((RSAPublicKey)PUBLIC_KEY, null);
@@ -48,18 +50,23 @@ public class ResourceServ implements Runnable{
         return null;
     }
 
-    public ResourceServ(Socket client, Access accessVerifier) {
+    public ResourceServ(Socket client, Access<String, String> accessVerifier) {
         this.client = client;
         this.accessVerifier = accessVerifier;
     }
 
 
-    private void doGet(Writer writer, OutputStream output) throws IOException{
-        System.out.println("GET handler");
-        writer.write(OK);
-        Http.writeJSONResponse(writer, new JSONObject().put("results",
-                new JSONObject().put("username", "JO").put("email", "asdf").toString())
-                .toString());
+    private void doGet(Writer writer, OutputStream output, Path path) throws IOException{
+        System.out.println(path);
+        System.out.println(Files.exists(path));
+        if(Files.isDirectory(path)){
+            writer.write(OK);
+            writer.flush();
+        }else{
+            String contentType = URLConnection.getFileNameMap().getContentTypeFor(path.getFileName().toString());
+            sendFile(writer, output, contentType, path);
+        }
+
     }
 
 
@@ -81,7 +88,7 @@ public class ResourceServ implements Runnable{
         return true;
     }
 
-    private boolean verifyAccess(Writer writer, InputStream inputStream, String path) throws IOException{
+    private boolean verifyAccess(Writer writer, InputStream inputStream, Path path, AccessType type) throws IOException{
         Map<String, String> header = Http.readHeaderByte(inputStream);
         String token = getToken(header);
         if(!verifyToken(writer, token))
@@ -90,11 +97,25 @@ public class ResourceServ implements Runnable{
         String username = JWT.decode(token).getClaim("username").asString();
         System.out.println("Got a username: " + username);
         System.out.println("Requested object: " + path);
-        System.out.println("Database: ");
-        accessVerifier.hasAccess(AccessType.READ, username, path);
+        String unixLikePath = path.toString().replaceAll("\\\\", "/");
+        accessVerifier.hasAccess(type, username, unixLikePath);
         return true;
-
     }
+
+    private void sendFile(Writer writer, OutputStream rawO, String contentType, Path file) throws IOException{
+        if(Files.exists(file) && Files.isReadable(file)) {
+            Http.writeHeader(writer, Files.size(file), contentType);
+            writer.flush();
+            rawO.write(Files.readAllBytes(file));
+            rawO.flush();
+            logger.fine("Sent " + file.toAbsolutePath() + " to client " + client.getInetAddress());
+        }else {
+            writer.write(NOT_FOUND);
+            writer.flush();
+            logger.log(Level.FINE, "File not found");
+        }
+    }
+
     @Override
     public void run() {
 
@@ -106,17 +127,23 @@ public class ResourceServ implements Runnable{
             String requestLine = Http.readLine(rawI);
             System.out.println("Request: " + requestLine);
             String[] tokens = requestLine.split("\\s+" );
+            Path path = Paths.get(tokens[1].substring(1));
 
-            if(!verifyAccess(writer, rawI, tokens[1])){
-                writer.write(FORBIDDEN);
-                writer.flush();
+            String requestType = tokens[0];
+
+            switch (requestType){
+                case "GET":
+                    if(!verifyAccess(writer, rawI, path, AccessType.READ)){
+                        writer.write(FORBIDDEN);
+                        writer.flush();
+                    }
+                    else
+                        doGet(writer, rawO, path); break;
+                default:
+                    writer.write(NOT_IMPLEMENTED);
+                    writer.flush();
             }
-            else if(tokens[0].equals("GET"))
-                doGet(writer, rawO);
-            else{
-                writer.write(NOT_IMPLEMENTED);
-                writer.flush();
-            }
+
 
             writer.close();
             rawO.close();

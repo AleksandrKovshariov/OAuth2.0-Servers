@@ -79,6 +79,12 @@ public class Http {
         return bytes;
     }
 
+    public static void writeHeader(Writer writer, long contentLength, String contentType) throws IOException {
+        writer.write(OK);
+        writer.write(CONTENT_LENGTH + contentLength + NEW_LINE);
+        writer.write(CONTENT_TYPE + contentType + NEW_LINE + NEW_LINE);
+    }
+
     public static String readLine(InputStream inputStream) throws IOException{
         StringBuilder sb = new StringBuilder();
         while(true){
