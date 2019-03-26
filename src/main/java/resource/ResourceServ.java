@@ -29,7 +29,7 @@ import java.util.stream.Stream;
 
 public class ResourceServ implements Runnable{
     private Socket client;
-    private Access<String, String> accessVerifier;
+    private Access<String, Path> accessVerifier;
     private static Logger logger = FineLogger.getLogger(ResourceServ.class.getName());
     private static final PublicKey PUBLIC_KEY = loadPublicKey();
     private static final Algorithm ALGORITHM = Algorithm.RSA256((RSAPublicKey)PUBLIC_KEY, null);
@@ -51,7 +51,7 @@ public class ResourceServ implements Runnable{
         return null;
     }
 
-    public ResourceServ(Socket client, Access<String, String> accessVerifier) {
+    public ResourceServ(Socket client, Access<String, Path> accessVerifier) {
         this.client = client;
         this.accessVerifier = accessVerifier;
     }
@@ -72,8 +72,10 @@ public class ResourceServ implements Runnable{
                 .put("name", fileName)
                 .put("size", size)
                 .put("modified", lastModified)
+                .put("isDir", Files.isDirectory(path))
                 .toString();
     }
+
     private void sendDirectoryStructure(Writer writer, Path path) throws IOException{
         JSONObject jsonObject = new JSONObject();
         try(Stream<Path> paths = Files.walk(path)){
@@ -86,8 +88,6 @@ public class ResourceServ implements Runnable{
     }
 
     private void doGet(Writer writer, OutputStream output, Path path) throws IOException{
-        System.out.println(path);
-        System.out.println(Files.exists(path));
         if(Files.isDirectory(path)){
            sendDirectoryStructure(writer, path);
         }else{
@@ -125,9 +125,7 @@ public class ResourceServ implements Runnable{
         String username = JWT.decode(token).getClaim("username").asString();
         System.out.println("Got a username: " + username);
         System.out.println("Requested object: " + path);
-        String unixLikePath = path.toString().replaceAll("\\\\", "/");
-        accessVerifier.hasAccess(type, username, unixLikePath);
-        return true;
+        return accessVerifier.hasAccess(type, username, path);
     }
 
     private void sendFile(Writer writer, OutputStream rawO, String contentType, Path file) throws IOException{
@@ -162,6 +160,7 @@ public class ResourceServ implements Runnable{
             switch (requestType){
                 case "GET":
                     if(!verifyAccess(writer, rawI, path, AccessType.READ)){
+                        logger.log(Level.CONFIG, "Rights violated");
                         writer.write(FORBIDDEN);
                         writer.flush();
                     }
