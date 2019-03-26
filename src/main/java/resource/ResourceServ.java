@@ -141,7 +141,7 @@ public class ResourceServ implements Runnable{
         }
     }
 
-    private String getToken(Map<String, String> header) throws IOException {
+    private String getToken(Map<String, String> header) {
         if(header.containsKey("Authorization")){
             return header.get("Authorization").replace("Bearer", "")
                     .replaceAll("\\s", "");
@@ -155,7 +155,6 @@ public class ResourceServ implements Runnable{
         }catch (SignatureVerificationException e){
             return false;
         }
-
 
         return decodedToken.getClaim("username").asString() != null
                 && decodedToken.getClaim("iss").asString().equals("sample-auth-server");
