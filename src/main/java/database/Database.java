@@ -1,15 +1,18 @@
 package database;
 
+import resource.AccessType;
+import resource.Access;
+
 import java.sql.*;
 
-public class Database {
+public class Database implements Access<String, String> {
     private Connection connection;
     private String usernameAccess = "select * from (" +
             " select u.username,  acc_path,  is_dir from users u join accesses USING(username)" +
             " union " +
             " select u.username, ac.acc_path, ac.is_dir from users u join groups g USING(group_name)" +
-            " join groups_accesses a USING(group_name) " +
-            " join accesses ac USING(acc_path, is_dir) " +
+            " join accesses_has_groups a USING(group_name) " +
+            " join accesses ac USING(access_id) " +
             ") alias " +
             "WHERE username = ?";
 
@@ -17,7 +20,8 @@ public class Database {
         this.connection = connection;
     }
 
-    public boolean hasAccess(String username, String path){
+    @Override
+    public boolean hasAccess(AccessType accessType, String username, String path){
         try {
             try (PreparedStatement preparedStatement = connection.prepareStatement(usernameAccess)){
                 preparedStatement.setString(1, username);
@@ -35,5 +39,13 @@ public class Database {
         return false;
     }
 
+    @Override
+    public void addAccess(String name, String access) {
 
+    }
+
+    @Override
+    public void deleteAccess(String name, String access) {
+
+    }
 }

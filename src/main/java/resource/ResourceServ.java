@@ -4,7 +4,6 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import database.Database;
 import org.json.JSONObject;
 import utils.FineLogger;
 import utils.Http;
@@ -21,16 +20,13 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
-import java.sql.Connection;
-import java.sql.SQLOutput;
 import java.util.Map;
-import java.util.function.BiPredicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ResourceServ implements Runnable{
     private Socket client;
-    private BiPredicate<String, String> accessVerifier;
+    private Access accessVerifier;
     private static Logger logger = FineLogger.getLogger(ResourceServ.class.getName());
     private static final PublicKey PUBLIC_KEY = loadPublicKey();
     private static final Algorithm ALGORITHM = Algorithm.RSA256((RSAPublicKey)PUBLIC_KEY, null);
@@ -52,7 +48,7 @@ public class ResourceServ implements Runnable{
         return null;
     }
 
-    public ResourceServ(Socket client, BiPredicate<String, String> accessVerifier) {
+    public ResourceServ(Socket client, Access accessVerifier) {
         this.client = client;
         this.accessVerifier = accessVerifier;
     }
@@ -71,14 +67,14 @@ public class ResourceServ implements Runnable{
 
         if(token == null){
             writer.write(ERROR400);
-            Http.writeJSONResponse(writer, new JSONObject().put("error", "Access token does not exist.").toString());
+            Http.writeJSONResponse(writer, new JSONObject().put("error", "AccessType token does not exist.").toString());
             return false;
         }
         DecodedJWT decodedJWT = JWT.decode(token);
 
         if(!tokenIsValid(decodedJWT)){
             writer.write(ERROR400);
-            Http.writeJSONResponse(writer, new JSONObject().put("error", "Access token is invalid.").toString());
+            Http.writeJSONResponse(writer, new JSONObject().put("error", "AccessType token is invalid.").toString());
             return false;
         }
 
@@ -95,7 +91,7 @@ public class ResourceServ implements Runnable{
         System.out.println("Got a username: " + username);
         System.out.println("Requested object: " + path);
         System.out.println("Database: ");
-        accessVerifier.test(username, path);
+        accessVerifier.hasAccess(AccessType.READ, username, path);
         return true;
 
     }

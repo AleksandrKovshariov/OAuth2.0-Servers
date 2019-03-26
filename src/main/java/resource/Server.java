@@ -62,7 +62,7 @@ public class Server {
                 try {
                     Socket client = serverSocket.accept();
                     requests.fine("Client " + client.getInetAddress() + " connected");
-                    Runnable requestFile = new ResourceServ(client, database::hasAccess);
+                    Runnable requestFile = new ResourceServ(client, database);
                     service.submit(requestFile);
                 }catch (IOException ex){
                     requests.log(Level.CONFIG, "Client disconnected", ex);
