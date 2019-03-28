@@ -154,7 +154,6 @@ public class ResourceServ implements Runnable{
             System.out.println("Request: " + requestLine);
             String[] tokens = requestLine.split("\\s+" );
             Path path = Paths.get(tokens[1].substring(1));
-
             String requestType = tokens[0];
 
             switch (requestType){

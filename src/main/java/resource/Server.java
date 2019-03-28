@@ -51,8 +51,9 @@ public class Server {
         ExecutorService service = Executors.newFixedThreadPool(NUMBER_OF_THREADS);
 
 
-        try(ServerSocket serverSocket = new ServerSocket(port, query, address)){
-            Connection connection = DriverManager.getConnection(url, username, password);
+        try(ServerSocket serverSocket = new ServerSocket(port, query, address);
+            Connection connection = DriverManager.getConnection(url, username, password)){
+
             Database database = new Database(connection);
 
             requests.fine(ResourceServ.class.getName() + " started on port " +
