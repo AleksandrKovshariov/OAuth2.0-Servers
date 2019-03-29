@@ -30,6 +30,7 @@ import java.util.stream.Stream;
 public class ResourceServ implements Runnable{
     private Socket client;
     private Access<String, Path> accessVerifier;
+    private String currentUsername = null;
     private static Logger logger = FineLogger.getLogger(ResourceServ.class.getName());
     private static final PublicKey PUBLIC_KEY = loadPublicKey();
     private static final Algorithm ALGORITHM = Algorithm.RSA256((RSAPublicKey)PUBLIC_KEY, null);
@@ -87,14 +88,24 @@ public class ResourceServ implements Runnable{
 
     }
 
-    private void doGet(Writer writer, OutputStream output, Path path) throws IOException{
+    private void send(Writer writer, OutputStream output, Path path) throws IOException{
         if(Files.isDirectory(path)){
-           sendDirectoryStructure(writer, path);
+            sendDirectoryStructure(writer, path);
         }else{
             String contentType = URLConnection.getFileNameMap().getContentTypeFor(path.getFileName().toString());
             sendFile(writer, output, contentType, path);
         }
+    }
 
+    private void sendUserAccesses(Writer writer, OutputStream outputStream){
+        System.out.println("Sending user accesses");
+    }
+
+    private void doGet(Writer writer, OutputStream output, Path path) throws IOException{
+        if(path.startsWith("resource"))
+            send(writer, output, path);
+        else if(path.startsWith("access"))
+            sendUserAccesses(writer, output);
     }
 
 
@@ -116,6 +127,10 @@ public class ResourceServ implements Runnable{
         return true;
     }
 
+    private void setCurrentUsername(String username){
+        currentUsername = username;
+    }
+
     private boolean verifyAccess(Writer writer, InputStream inputStream, Path path, AccessType type) throws IOException{
         Map<String, String> header = Http.readHeaderByte(inputStream);
         String token = getToken(header);
@@ -123,6 +138,7 @@ public class ResourceServ implements Runnable{
             return false;
         //token can't be null because of token verification above
         String username = JWT.decode(token).getClaim("username").asString();
+        setCurrentUsername(username);
         System.out.println("Got a username: " + username);
         System.out.println("Requested object: " + path);
         return accessVerifier.hasAccess(type, username, path);
