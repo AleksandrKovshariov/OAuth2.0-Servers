@@ -17,7 +17,7 @@ public class Database implements Access<String, Path> {
     private String usernameAccess = "select * from user_access" +
             " WHERE username = ? and acc_path = ? and is_dir = ?";
 
-    private String userAccess = "select * from user_access" +
+    private String userAccess = "select acc_path from user_access" +
             " WHERE username = ?";
 
     public Database(Connection connection) {
@@ -29,6 +29,7 @@ public class Database implements Access<String, Path> {
         try {
             try (PreparedStatement preparedStatement = connection.prepareStatement(usernameAccess)){
                 String unixLikePath = path.toString().replaceAll("\\\\", "/");
+                System.out.println(unixLikePath);
                 preparedStatement.setString(1, username);
                 preparedStatement.setString(2, unixLikePath);
                 preparedStatement.setBoolean(3, Files.isDirectory(path));
@@ -60,7 +61,7 @@ public class Database implements Access<String, Path> {
                 preparedStatement.setString(1, name);
                 ResultSet resultSet = preparedStatement.executeQuery();
                 while (resultSet.next()){
-                    list.add(Paths.get(resultSet.getString(2)));
+                    list.add(Paths.get(resultSet.getString(1)));
                 }
 
             }

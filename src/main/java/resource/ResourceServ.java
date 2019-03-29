@@ -89,6 +89,7 @@ public class ResourceServ implements Runnable{
     }
 
     private void send(Writer writer, OutputStream output, Path path) throws IOException{
+        System.out.println("Path" + path);
         if(Files.isDirectory(path)){
             sendDirectoryStructure(writer, path);
         }else{
@@ -102,7 +103,7 @@ public class ResourceServ implements Runnable{
     }
 
     private void doGet(Writer writer, OutputStream output, Path path) throws IOException{
-        if(path.startsWith("resource"))
+        if(path.startsWith("resource/") || path.startsWith("resource"))
             send(writer, output, path);
         else if(path.startsWith("access"))
             sendUserAccesses(writer, output);
