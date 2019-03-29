@@ -73,7 +73,7 @@ public class Server {
         }catch (IOException ex){
             errorLog.log(Level.SEVERE, "Error init server socket", ex);
         }catch (SQLException ex){
-            errorLog.log(Level.SEVERE, "Can't connect to database");
+            errorLog.log(Level.SEVERE, "Can't connect to database", ex);
         }
 
     }
