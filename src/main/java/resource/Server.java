@@ -25,7 +25,7 @@ public class Server {
     private static Logger requests = Logger.getLogger("Requests");
 
 
-    public String url = "jdbc:mysql://localhost:3306/mydb?autoReconnect=true&useSSL=false";
+    public String url = "jdbc:mysql://localhost:3306/mydb?allowPublicKeyRetrieval=true&useSSL=false;";
     public String username = "resource";
     public String password = "MyNewPass4!";
     public static final int NUMBER_OF_THREADS = 10;
