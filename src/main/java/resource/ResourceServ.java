@@ -7,6 +7,9 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import org.json.JSONObject;
 import utils.FineLogger;
 import utils.Http;
+
+import javax.naming.OperationNotSupportedException;
+
 import static utils.ServerConstants.*;
 
 import java.io.*;
@@ -22,6 +25,7 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -98,14 +102,23 @@ public class ResourceServ implements Runnable{
         }
     }
 
-    private void sendUserAccesses(Writer writer, OutputStream outputStream){
+    private void sendUserAccesses(Writer writer, OutputStream outputStream) throws IOException{
         System.out.println("Sending user accesses");
+        try {
+            List<Path> list = accessVerifier.getUserAccess(currentUsername);
+            JSONObject accesses = new JSONObject();
+            list.forEach(x -> accesses.append("access", x));
+            writer.write(OK);
+            Http.writeJSONResponse(writer, accesses.toString());
+        }catch (OperationNotSupportedException e){
+            logger.log(Level.CONFIG, "Can't send user accesses", e);
+        }
     }
 
     private void doGet(Writer writer, OutputStream output, Path path) throws IOException{
-        if(path.startsWith("resource/") || path.startsWith("resource"))
+        if((path.startsWith("resource/") || path.startsWith("resource")) && verifyAccess(path, AccessType.READ))
             send(writer, output, path);
-        else if(path.startsWith("access"))
+        else if(path.startsWith("access") || path.startsWith("access"))
             sendUserAccesses(writer, output);
     }
 
@@ -124,6 +137,7 @@ public class ResourceServ implements Runnable{
             Http.writeJSONResponse(writer, new JSONObject().put("error", "AccessType token is invalid.").toString());
             return false;
         }
+        setCurrentUsername(decodedJWT.getClaim("username").asString());
 
         return true;
     }
@@ -132,17 +146,11 @@ public class ResourceServ implements Runnable{
         currentUsername = username;
     }
 
-    private boolean verifyAccess(Writer writer, InputStream inputStream, Path path, AccessType type) throws IOException{
-        Map<String, String> header = Http.readHeaderByte(inputStream);
-        String token = getToken(header);
-        if(!verifyToken(writer, token))
-            return false;
+    private boolean verifyAccess(Path path, AccessType type) throws IOException{
         //token can't be null because of token verification above
-        String username = JWT.decode(token).getClaim("username").asString();
-        setCurrentUsername(username);
-        System.out.println("Got a username: " + username);
+        System.out.println("Got a username: " + currentUsername);
         System.out.println("Requested object: " + path);
-        return accessVerifier.hasAccess(type, username, path);
+        return accessVerifier.hasAccess(type, currentUsername, path);
     }
 
     private void sendFile(Writer writer, OutputStream rawO, String contentType, Path file) throws IOException{
@@ -173,18 +181,18 @@ public class ResourceServ implements Runnable{
             Path path = Paths.get(tokens[1].substring(1));
             String requestType = tokens[0];
 
-            switch (requestType){
-                case "GET":
-                    if(!verifyAccess(writer, rawI, path, AccessType.READ)){
-                        logger.log(Level.CONFIG, "Rights violated");
-                        writer.write(FORBIDDEN);
+            Map<String, String> header = Http.readHeaderByte(rawI);
+            String token = getToken(header);
+            if(verifyToken(writer, token)) {
+
+                switch (requestType) {
+                    case "GET":
+                        doGet(writer, rawO, path);
+                        break;
+                    default:
+                        writer.write(NOT_IMPLEMENTED);
                         writer.flush();
-                    }
-                    else
-                        doGet(writer, rawO, path); break;
-                default:
-                    writer.write(NOT_IMPLEMENTED);
-                    writer.flush();
+                }
             }
 
 

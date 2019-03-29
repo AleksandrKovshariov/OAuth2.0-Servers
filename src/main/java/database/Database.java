@@ -24,12 +24,15 @@ public class Database implements Access<String, Path> {
         this.connection = connection;
     }
 
+    private static String unixLikePath(Path path){
+        return path.toString().replaceAll("\\\\", "/");
+    }
+
     @Override
     public boolean hasAccess(AccessType accessType, String username, Path path){
         try {
             try (PreparedStatement preparedStatement = connection.prepareStatement(usernameAccess)){
-                String unixLikePath = path.toString().replaceAll("\\\\", "/");
-                System.out.println(unixLikePath);
+                String unixLikePath = unixLikePath(path);
                 preparedStatement.setString(1, username);
                 preparedStatement.setString(2, unixLikePath);
                 preparedStatement.setBoolean(3, Files.isDirectory(path));
