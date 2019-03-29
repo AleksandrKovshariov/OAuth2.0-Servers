@@ -2,6 +2,7 @@ package resource;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 public class ServerMain {
 
@@ -21,7 +22,7 @@ public class ServerMain {
         return isPortCorrect(port) ? port : -1;
     }
 
-    public static void main(String[] args)
+    public static void main(String[] args) throws UnknownHostException
     {
         int port = 0;
 
@@ -35,7 +36,7 @@ public class ServerMain {
             System.exit(-1);
         }
 
-        Server server = new Server(port, 0, InetAddress.getLoopbackAddress());
+        Server server = new Server(port, 0, InetAddress.getLocalHost());
         server.start();
     }
 }

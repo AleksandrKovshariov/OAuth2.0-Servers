@@ -27,7 +27,7 @@ public class Server {
 
     public String url = "jdbc:mysql://localhost:3306/mydb";
     public String username = "resource";
-    public String password = "cfif";
+    public String password = "MyNewPass4!";
     public static final int NUMBER_OF_THREADS = 10;
 
     static{
