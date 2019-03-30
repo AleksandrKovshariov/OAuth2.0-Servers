@@ -72,12 +72,13 @@ public class ResourceServ implements Runnable{
         }
 
         String fileName = path.getFileName().toString();
-
+        boolean isDir = Files.isDirectory(path);
         return new JSONObject()
                 .put("name", fileName)
                 .put("size", size)
                 .put("modified", lastModified)
-                .put("isDir", Files.isDirectory(path))
+                .put("isDir", isDir)
+                .put("path", isDir ? path + "/" : path)
                 .toString();
     }
 
