@@ -116,8 +116,14 @@ public class ResourceServ implements Runnable{
     }
 
     private void doGet(Writer writer, OutputStream output, Path path) throws IOException{
-        if((path.startsWith("resource/") || path.startsWith("resource")) && verifyAccess(path, AccessType.READ))
-            send(writer, output, path);
+        if((path.startsWith("resource/") || path.startsWith("resource"))) {
+            if (verifyAccess(path, AccessType.READ)) {
+                logger.log(Level.FINE, "Access denied");
+                writer.write(UNAUTHORIZED);
+                writer.flush();
+            }else
+                send(writer, output, path);
+        }
         else if(path.startsWith("access") || path.startsWith("access"))
             sendUserAccesses(writer, output);
     }

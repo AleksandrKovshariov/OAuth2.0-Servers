@@ -105,7 +105,6 @@ public class AuthorizationServ implements Runnable{
         }else{
             logger.log(Level.FINER, "Sent OK");
             String token = generateToken(map.get("username"));
-            System.out.println(token);
             writer.write(OK);
             Http.writeJSONResponse(writer,
                     new JSONObject().put("access_token", token)
