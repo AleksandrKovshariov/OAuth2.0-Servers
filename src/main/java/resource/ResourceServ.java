@@ -73,7 +73,7 @@ public class ResourceServ implements Runnable{
 
         String fileName = path.getFileName().toString();
         boolean isDir = Files.isDirectory(path);
-        String pathWithoutFirst = path.toString().replaceFirst("/resource","");
+        String pathWithoutFirst = path.toString().replaceFirst("resource/","");
         return new JSONObject()
                 .put("name", fileName)
                 .put("size", size)
