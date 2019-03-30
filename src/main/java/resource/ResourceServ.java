@@ -83,8 +83,8 @@ public class ResourceServ implements Runnable{
 
     private void sendDirectoryStructure(Writer writer, Path path) throws IOException{
         JSONObject jsonObject = new JSONObject();
-        try(Stream<Path> paths = Files.walk(path)){
-            paths.skip(1).forEach(x -> jsonObject.append("files", formJsonFile(x)));
+        try(Stream<String> paths = Files.lines(path)){
+            paths.forEach(x -> jsonObject.append("files", formJsonFile(Paths.get(x))));
         }
         writer.write(OK);
         writer.write("Type: directory" + NEW_LINE);
