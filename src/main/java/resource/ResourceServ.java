@@ -117,7 +117,7 @@ public class ResourceServ implements Runnable{
 
     private void doGet(Writer writer, OutputStream output, Path path) throws IOException{
         if((path.startsWith("resource/") || path.startsWith("resource"))) {
-            if (verifyAccess(path, AccessType.READ)) {
+            if (!verifyAccess(path, AccessType.READ)) {
                 logger.log(Level.FINE, "Access denied");
                 writer.write(UNAUTHORIZED);
                 writer.flush();
