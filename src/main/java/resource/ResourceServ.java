@@ -107,7 +107,8 @@ public class ResourceServ implements Runnable{
         try {
             List<Path> list = accessVerifier.getUserAccess(currentUsername);
             JSONObject accesses = new JSONObject();
-            list.forEach(x -> accesses.append("access", x));
+            list.stream().filter(x -> Files.exists(x))
+                    .forEach(x -> accesses.append("access", Files.isDirectory(x) ? x + "/" : x));
             writer.write(OK);
             Http.writeJSONResponse(writer, accesses.toString());
         }catch (OperationNotSupportedException e){
