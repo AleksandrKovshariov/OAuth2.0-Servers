@@ -26,8 +26,8 @@ public class Server {
 
 
     public static final String url = "jdbc:mysql://localhost:3306/mydb?allowPublicKeyRetrieval=true&useSSL=false";
-    public static final String username = "resource";
-    public static final String password = "cfif";
+    public static final String username = "root";
+    public static final String password = "";
     public static final int NUMBER_OF_THREADS = 10;
 
     static{
