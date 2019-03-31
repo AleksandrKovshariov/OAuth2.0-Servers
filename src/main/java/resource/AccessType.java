@@ -1,5 +1,5 @@
 package resource;
 
 public enum AccessType {
-    READ, ADD, DELETE
+    READ, WRITE, DELETE, GRANT
 }

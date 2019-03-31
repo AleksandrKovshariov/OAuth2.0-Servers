@@ -5,9 +5,9 @@ import java.util.List;
 
 public interface Access<T, V> {
 
-    boolean hasAccess(AccessType accessType, T name, V access);
-    void addAccess(T name, V access);
-    void deleteAccess(T name, V access);
+    boolean hasAccess(V access);
+    void addAccess(V access);
+    void deleteAccess(V access);
 
     default List<V> getUserAccess(T name) throws OperationNotSupportedException {
         throw new OperationNotSupportedException();

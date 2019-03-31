@@ -25,6 +25,8 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -33,7 +35,7 @@ import java.util.stream.Stream;
 
 public class ResourceServ implements Runnable{
     private Socket client;
-    private Access<String, Path> accessVerifier;
+    private Access<String, Resource> accessVerifier;
     private String currentUsername = null;
     private static Logger logger = FineLogger.getLogger(ResourceServ.class.getName());
     private static final PublicKey PUBLIC_KEY = loadPublicKey();
@@ -56,7 +58,7 @@ public class ResourceServ implements Runnable{
         return null;
     }
 
-    public ResourceServ(Socket client, Access<String, Path> accessVerifier) {
+    public ResourceServ(Socket client, Access<String, Resource> accessVerifier) {
         this.client = client;
         this.accessVerifier = accessVerifier;
     }
@@ -104,15 +106,15 @@ public class ResourceServ implements Runnable{
         }
     }
 
-    private void sendUserAccesses(Writer writer, OutputStream outputStream) throws IOException{
+    private void sendUserAccesses(Writer writer) throws IOException{
         System.out.println("Sending user accesses");
         try {
-            List<Path> list = accessVerifier.getUserAccess(currentUsername);
+            List<Resource> list = accessVerifier.getUserAccess(currentUsername);
             JSONObject accesses = new JSONObject();
-            list.stream().filter(x -> Files.exists(x))
-                    .forEach(x -> accesses.append("access", Files.isDirectory(x) ? (x + "/")
-                            .replaceFirst("resource/", "")
-                            : x.toString().replaceFirst("resource/", "")));
+            list.stream().map(x -> x.getPath()).filter(x -> Files.exists(x))
+                    .map(x -> Files.isDirectory(x) ? x + "/" : x)
+                    .forEach(x -> accesses.append("access", x));
+
             writer.write(OK);
             Http.writeJSONResponse(writer, accesses.toString());
         }catch (OperationNotSupportedException e){
@@ -122,7 +124,8 @@ public class ResourceServ implements Runnable{
 
     private void doGet(Writer writer, OutputStream output, Path path) throws IOException{
         if((path.startsWith("resource/") || path.startsWith("resource"))) {
-            if (!verifyAccess(path, AccessType.READ)) {
+            Resource resource = new Resource(Files.isDirectory(path), path, currentUsername, AccessType.READ);
+            if (!verifyAccess(resource)) {
                 logger.log(Level.FINE, "Access denied");
                 writer.write(UNAUTHORIZED);
                 writer.flush();
@@ -130,7 +133,7 @@ public class ResourceServ implements Runnable{
                 send(writer, output, path);
         }
         else if(path.startsWith("access") || path.startsWith("access"))
-            sendUserAccesses(writer, output);
+            sendUserAccesses(writer);
     }
 
 
@@ -157,11 +160,10 @@ public class ResourceServ implements Runnable{
         currentUsername = username;
     }
 
-    private boolean verifyAccess(Path path, AccessType type) throws IOException{
-        //token can't be null because of token verification above
-        System.out.println("Got a username: " + currentUsername);
-        System.out.println("Requested object: " + path);
-        return accessVerifier.hasAccess(type, currentUsername, path);
+    private boolean verifyAccess(Resource resource) throws IOException{
+        System.out.println("Got a username: " + resource.getUsername());
+        System.out.println("Requested object: " + resource);
+        return accessVerifier.hasAccess(resource);
     }
 
     private void sendFile(Writer writer, OutputStream rawO, String contentType, Path file) throws IOException{
