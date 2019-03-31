@@ -25,7 +25,6 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -111,23 +110,37 @@ public class ResourceServ implements Runnable{
         return path.replaceAll("\\\\", "/");
     }
 
-    private void sendUserAccesses(Writer writer) throws IOException{
-        System.out.println("Sending user accesses");
+
+    private JSONObject getAccess(String... params) throws OperationNotSupportedException{
+        List<Resource> resources = accessVerifier.getUserAccess(currentUsername, params);
+        JSONObject accesses = new JSONObject();
+        List<String> pathes = resources.stream().map(Resource::getPath).filter(x -> Files.exists(x))
+                .map(x -> Files.isDirectory(x) ? x + "/" : x.toString())
+                .map(x -> unixLikePath(x).replaceFirst("resource/", ""))
+                .collect(Collectors.toList());
+
+        for (int i = 0; i < pathes.size(); i++) {
+            accesses.append("access", new JSONObject().put("path", pathes.get(i))
+                    .put("isDir", resources.get(i).isIdDir())
+                    .put("accessType", Arrays.toString(resources.get(i).getAccessTypes())));
+        }
+        return accesses;
+    }
+
+
+    private void sendUserAccesses(Writer writer, Map<String, String> urlParams) throws IOException{
         try {
-            List<Resource> resources = accessVerifier.getUserAccess(currentUsername);
-            JSONObject accesses = new JSONObject();
-            List<String> pathes = resources.stream().map(Resource::getPath).filter(x -> Files.exists(x))
-                    .map(x -> Files.isDirectory(x) ? x + "/" : x.toString())
-                    .map(x -> unixLikePath(x).replaceFirst("resource/", ""))
-                    .collect(Collectors.toList());
-
-            for (int i = 0; i < pathes.size(); i++) {
-                accesses.append("access", new JSONObject().put("path", pathes.get(i))
-                        .put("isDir", resources.get(i).isIdDir())
-                        .put("accessType", Arrays.toString(resources.get(i).getAccessTypes())));
+            JSONObject accesses;
+            if(urlParams == null){
+                accesses = getAccess();
+            }else if(urlParams.containsKey("dirOnly")){
+                accesses = getAccess(urlParams.get("dirOnly"));
+            }else{
+                writer.write(ERROR400);
+                writer.flush();
+                return;
             }
-
-
+            logger.log(Level.FINE, "Sending user accesses");
             writer.write(OK);
             Http.writeJSONResponse(writer, accesses.toString());
         }catch (OperationNotSupportedException e){
@@ -135,18 +148,22 @@ public class ResourceServ implements Runnable{
         }
     }
 
-    private void doGet(Writer writer, OutputStream output, Path path) throws IOException{
-        if((path.startsWith("resource/") || path.startsWith("resource"))) {
+    private void doGet(Writer writer, OutputStream output, String request) throws IOException{
+        Path path = Http.getPathFromUrl(request);
+        if((request.startsWith("resource"))) {
             Resource resource = new Resource(Files.isDirectory(path), path, currentUsername, AccessType.READ);
             if (!verifyAccess(resource)) {
                 logger.log(Level.FINE, "Access denied");
                 writer.write(UNAUTHORIZED);
                 writer.flush();
-            }else
+            }else {
                 send(writer, output, path);
+            }
         }
-        else if(path.startsWith("access") || path.startsWith("access"))
-            sendUserAccesses(writer);
+        else if(request.startsWith("access")) {
+            Map<String, String> urlParams = Http.parseUrlParams(request);
+            sendUserAccesses(writer, urlParams);
+        }
     }
 
 
@@ -204,7 +221,7 @@ public class ResourceServ implements Runnable{
             String requestLine = Http.readLine(rawI);
             System.out.println("Request: " + requestLine);
             String[] tokens = requestLine.split("\\s+" );
-            Path path = Paths.get(tokens[1].substring(1));
+            String path = tokens[1].substring(1);
             String requestType = tokens[0];
 
             Map<String, String> header = Http.readHeaderByte(rawI);
@@ -244,8 +261,9 @@ public class ResourceServ implements Runnable{
         }
     }
 
-    private void doPost(Writer writer, InputStream rawI, Path path) throws IOException{
-        System.out.println(path);
+    private void doPost(Writer writer, InputStream rawI, String request) throws IOException{
+        System.out.println(request);
+        Path path = Http.getPathFromUrl(request);
         Resource resource = new Resource(false, path.getParent(), currentUsername, AccessType.WRITE);
         if(!verifyAccess(resource)){
             writer.write(UNAUTHORIZED);

@@ -9,7 +9,7 @@ public interface Access<T, V> {
     void addAccess(V access);
     void deleteAccess(V access);
 
-    default List<V> getUserAccess(T name) throws OperationNotSupportedException {
+    default List<V> getUserAccess(T name, String... params) throws OperationNotSupportedException {
         throw new OperationNotSupportedException();
     }
 }

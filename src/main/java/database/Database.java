@@ -21,7 +21,7 @@ public class Database implements Access<String, Resource> {
             " WHERE username = ? and acc_path = ? and is_dir = ?";
 
     private String userAccess = "select acc_path, is_dir, access_type from user_access" +
-            " WHERE username = ?";
+            " WHERE username = ? ";
 
     public Database(Connection connection) {
         this.connection = connection;
@@ -57,12 +57,22 @@ public class Database implements Access<String, Resource> {
 
     }
 
+    //refactor....
     @Override
-    public List<Resource> getUserAccess(String name){
+    public List<Resource> getUserAccess(String name, String... params){
         List<Resource> list = new ArrayList<>();
         try{
+            String userAccess = this.userAccess;
+            boolean hasParams = params.length > 0;
+            System.out.println(params[0]);
+            if(hasParams){
+                userAccess += "and is_dir = ?";
+            }
             try(PreparedStatement preparedStatement = connection.prepareStatement(userAccess)){
                 preparedStatement.setString(1, name);
+                if (hasParams) {
+                    preparedStatement.setBoolean(2, Boolean.valueOf(params[0]));
+                }
                 ResultSet resultSet = preparedStatement.executeQuery();
                 while (resultSet.next()){
                     Path path = Paths.get(resultSet.getString(1));
@@ -74,6 +84,7 @@ public class Database implements Access<String, Resource> {
                     }
 
                     Resource resource = new Resource(isDir, path, null, accessTypes);
+                    System.out.println(resource);
                     list.add(resource);
                 }
 

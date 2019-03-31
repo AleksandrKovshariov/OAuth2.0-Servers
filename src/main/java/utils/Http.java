@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -42,6 +45,27 @@ public class Http {
             lineBuilder.setLength(0);
         }
         return headerMap;
+    }
+
+    public static Map<String, String> parseUrlParams(String url){
+        Map<String, String> map = new HashMap<>();
+
+        if(url.contains("?")){
+            String[] params = url.substring(url.indexOf('?') + 1).split("&");
+            for(String s : params){
+                String[] keyVals = s.split("=");
+                if(keyVals.length == 2)
+                    map.put(keyVals[0], keyVals[1]);
+            }
+            return map;
+        }
+        return null;
+    }
+
+    public static Path getPathFromUrl(String url){
+        if(url.contains("?"))
+            return Paths.get(url.substring(url.indexOf('?') + 1));
+        return Paths.get(url);
     }
 
     public static Map<String, String> parseJSONBody(byte[] bytes){
