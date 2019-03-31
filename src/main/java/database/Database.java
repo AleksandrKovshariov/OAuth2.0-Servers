@@ -63,15 +63,12 @@ public class Database implements Access<String, Resource> {
         List<Resource> list = new ArrayList<>();
         try{
             String userAccess = this.userAccess;
-            boolean hasParams = params.length > 0;
-            if(hasParams){
-                userAccess += "and is_dir = ?";
+            for(String s : params){
+                userAccess += s;
             }
             try(PreparedStatement preparedStatement = connection.prepareStatement(userAccess)){
                 preparedStatement.setString(1, name);
-                if (hasParams) {
-                    preparedStatement.setBoolean(2, Boolean.valueOf(params[0]));
-                }
+
                 ResultSet resultSet = preparedStatement.executeQuery();
                 while (resultSet.next()){
                     Path path = Paths.get(resultSet.getString(1));

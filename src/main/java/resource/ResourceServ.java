@@ -133,12 +133,10 @@ public class ResourceServ implements Runnable{
             JSONObject accesses;
             if(urlParams == null){
                 accesses = getAccess();
-            }else if(urlParams.containsKey("is_dir")){
-                accesses = getAccess(urlParams.get("is_dir"));
-            }else{
-                writer.write(ERROR400);
-                writer.flush();
-                return;
+            }else {
+                String[] keyVals
+                        = urlParams.keySet().stream().map(x -> x + "=" + urlParams.get(x)).toArray(String[]::new);
+                accesses = getAccess(keyVals);
             }
             logger.log(Level.FINE, "Sending user accesses");
             writer.write(OK);
