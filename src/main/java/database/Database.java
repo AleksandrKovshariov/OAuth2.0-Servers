@@ -3,6 +3,7 @@ package database;
 import resource.AccessType;
 import resource.Access;
 import resource.Resource;
+import resource.ResourceServ;
 
 import javax.naming.OperationNotSupportedException;
 import java.nio.file.Files;
@@ -26,15 +27,12 @@ public class Database implements Access<String, Resource> {
         this.connection = connection;
     }
 
-    private static String unixLikePath(Path path){
-        return path.toString().replaceAll("\\\\", "/");
-    }
 
     @Override
     public boolean hasAccess(Resource resource){
         try {
             try (PreparedStatement preparedStatement = connection.prepareStatement(usernameAccess)){
-                String unixLikePath = unixLikePath(resource.getPath());
+                String unixLikePath = ResourceServ.unixLikePath(resource.getPath().toString());
                 preparedStatement.setString(1, resource.getUsername());
                 preparedStatement.setString(2, unixLikePath);
                 preparedStatement.setBoolean(3, Files.isDirectory(resource.getPath()));

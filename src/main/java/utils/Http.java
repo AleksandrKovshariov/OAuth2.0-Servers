@@ -61,6 +61,7 @@ public class Http {
         return mapBody;
     }
 
+
     public static void writeJSONResponse(Writer writer, String json) throws IOException{
         writer.write(CONTENT_TYPE + "application/json" + NEW_LINE);
         writer.write(CONTENT_LENGTH + json.getBytes(StandardCharsets.UTF_8).length + NEW_LINE + NEW_LINE);

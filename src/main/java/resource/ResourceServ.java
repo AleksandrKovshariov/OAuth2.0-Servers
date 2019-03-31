@@ -75,13 +75,13 @@ public class ResourceServ implements Runnable{
 
         String fileName = path.getFileName().toString();
         boolean isDir = Files.isDirectory(path);
-        String pathWithoutFirst = path.toString().replaceFirst("resource/","");
+        String pathWithoutRes = unixLikePath(path.toString()).replaceFirst("resource/","");
         return new JSONObject()
                 .put("name", fileName)
                 .put("size", size)
                 .put("modified", lastModified)
                 .put("isDir", isDir)
-                .put("path", isDir ? (pathWithoutFirst + "/") : pathWithoutFirst)
+                .put("path", isDir ? (pathWithoutRes + "/") : pathWithoutRes)
                 .toString();
     }
 
@@ -106,15 +106,23 @@ public class ResourceServ implements Runnable{
         }
     }
 
+    public static String unixLikePath(String path){
+        return path.replaceAll("\\\\", "/");
+    }
+
     private void sendUserAccesses(Writer writer) throws IOException{
         System.out.println("Sending user accesses");
         try {
             List<Resource> list = accessVerifier.getUserAccess(currentUsername);
             JSONObject accesses = new JSONObject();
-            list.stream().map(x -> x.getPath()).filter(x -> Files.exists(x))
-                    .map(x -> Files.isDirectory(x) ? x + "/" : x)
+            list.stream().map(Resource::getPath).filter(x -> Files.exists(x))
+                    .map(x -> Files.isDirectory(x) ? x + "/" : x.toString())
+                    .map(x -> unixLikePath(x).replaceFirst("resource/", ""))
                     .forEach(x -> accesses.append("access", x));
-
+            list.forEach(x -> {
+                accesses.append("isDir", x.isIdDir());
+                accesses.append("accessType", Arrays.toString(x.getAccessTypes()));
+            });
             writer.write(OK);
             Http.writeJSONResponse(writer, accesses.toString());
         }catch (OperationNotSupportedException e){
