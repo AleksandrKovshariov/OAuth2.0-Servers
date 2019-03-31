@@ -173,7 +173,7 @@ public class ResourceServ implements Runnable{
         currentUsername = username;
     }
 
-    private boolean verifyAccess(Resource resource) throws IOException{
+    private boolean verifyAccess(Resource resource){
         System.out.println("Got a username: " + resource.getUsername());
         System.out.println("Requested object: " + resource);
         return accessVerifier.hasAccess(resource);
@@ -199,7 +199,7 @@ public class ResourceServ implements Runnable{
         try {
             OutputStream rawO = new BufferedOutputStream(client.getOutputStream());
             Writer writer = new OutputStreamWriter(rawO, StandardCharsets.UTF_8);
-            InputStream rawI = client.getInputStream();
+            InputStream rawI = new BufferedInputStream(client.getInputStream());
 
             String requestLine = Http.readLine(rawI);
             System.out.println("Request: " + requestLine);
@@ -214,6 +214,9 @@ public class ResourceServ implements Runnable{
                 switch (requestType) {
                     case "GET":
                         doGet(writer, rawO, path);
+                        break;
+                    case "POST":
+                        doPost(writer, rawI, path);
                         break;
                     default:
                         writer.write(NOT_IMPLEMENTED);
@@ -238,6 +241,17 @@ public class ResourceServ implements Runnable{
             }catch (IOException ex){
                 logger.log(Level.WARNING, "Can't close socket for " + client.getInetAddress(), ex);
             }
+        }
+    }
+
+    private void doPost(Writer writer, InputStream rawI, Path path) throws IOException{
+        System.out.println(path);
+        Resource resource = new Resource(false, path.getParent(), currentUsername, AccessType.WRITE);
+        if(!verifyAccess(resource)){
+            writer.write(UNAUTHORIZED);
+            writer.flush();
+        }else{
+
         }
     }
 

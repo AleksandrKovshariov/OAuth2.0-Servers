@@ -1,11 +1,16 @@
 package resource;
 
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
 public class Resource {
     private boolean idDir;
+    private AccessType[] accessType;
+    private Path path;
+    private String username;
+
 
     public boolean isIdDir() {
         return idDir;
@@ -18,10 +23,6 @@ public class Resource {
     public String getUsername() {
         return username;
     }
-
-    private AccessType[] accessType;
-    private Path path;
-    private String username;
 
     public Resource(boolean idDir, Path path, String username, AccessType... accessType) {
         this.idDir = idDir;
@@ -38,5 +39,9 @@ public class Resource {
         return accessType;
     }
 
-
+    @Override
+    public String toString() {
+        return "Is dir: " + idDir + " , Path: " + path + " , Username: " + username
+                + " , AccessTypes: " + Arrays.toString(accessType);
+    }
 }
