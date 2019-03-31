@@ -78,7 +78,7 @@ public class ResourceServ implements Runnable{
         String pathWithoutRes = unixLikePath(path.toString()).replaceFirst("resource/","");
         return new JSONObject()
                 .put("name", fileName)
-                .put("size", size)
+                .put("size", isDir ? " " : size)
                 .put("modified", lastModified)
                 .put("isDir", isDir)
                 .put("path", isDir ? (pathWithoutRes + "/") : pathWithoutRes)
