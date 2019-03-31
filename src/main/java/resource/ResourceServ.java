@@ -133,7 +133,7 @@ public class ResourceServ implements Runnable{
             JSONObject accesses;
             if(urlParams == null){
                 accesses = getAccess();
-            }else if(urlParams.containsKey("dirOnly")){
+            }else if(urlParams.containsKey("is_dir")){
                 accesses = getAccess(urlParams.get("is_dir"));
             }else{
                 writer.write(ERROR400);
