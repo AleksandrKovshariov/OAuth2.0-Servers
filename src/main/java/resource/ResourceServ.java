@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ResourceServ implements Runnable{
@@ -113,16 +114,20 @@ public class ResourceServ implements Runnable{
     private void sendUserAccesses(Writer writer) throws IOException{
         System.out.println("Sending user accesses");
         try {
-            List<Resource> list = accessVerifier.getUserAccess(currentUsername);
+            List<Resource> resources = accessVerifier.getUserAccess(currentUsername);
             JSONObject accesses = new JSONObject();
-            list.stream().map(Resource::getPath).filter(x -> Files.exists(x))
+            List<String> pathes = resources.stream().map(Resource::getPath).filter(x -> Files.exists(x))
                     .map(x -> Files.isDirectory(x) ? x + "/" : x.toString())
                     .map(x -> unixLikePath(x).replaceFirst("resource/", ""))
-                    .forEach(x -> accesses.append("access", x));
-            list.forEach(x -> {
-                accesses.append("isDir", x.isIdDir());
-                accesses.append("accessType", Arrays.toString(x.getAccessTypes()));
-            });
+                    .collect(Collectors.toList());
+
+            for (int i = 0; i < pathes.size(); i++) {
+                accesses.append("access", new JSONObject().put("path", pathes.get(i))
+                        .put("isDir", resources.get(i).isIdDir())
+                        .put("accessType", Arrays.toString(resources.get(i).getAccessTypes())));
+            }
+
+
             writer.write(OK);
             Http.writeJSONResponse(writer, accesses.toString());
         }catch (OperationNotSupportedException e){
