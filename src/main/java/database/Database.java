@@ -64,7 +64,7 @@ public class Database implements Access<String, Resource> {
         try{
             String userAccess = this.userAccess;
             for(String s : params){
-                userAccess += s;
+                userAccess += " and " + s;
             }
             try(PreparedStatement preparedStatement = connection.prepareStatement(userAccess)){
                 preparedStatement.setString(1, name);
