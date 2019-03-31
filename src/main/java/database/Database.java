@@ -64,7 +64,6 @@ public class Database implements Access<String, Resource> {
         try{
             String userAccess = this.userAccess;
             boolean hasParams = params.length > 0;
-            System.out.println(params[0]);
             if(hasParams){
                 userAccess += "and is_dir = ?";
             }
