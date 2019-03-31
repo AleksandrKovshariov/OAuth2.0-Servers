@@ -138,6 +138,11 @@ public class ResourceServ implements Runnable{
                         = urlParams.keySet().stream().map(x -> x + "=" + urlParams.get(x)).toArray(String[]::new);
                 accesses = getAccess(keyVals);
             }
+            if(accesses.isEmpty()) {
+                writer.write(NO_CONTENT);
+                writer.flush();
+                return;
+            }
             logger.log(Level.FINE, "Sending user accesses");
             writer.write(OK);
             Http.writeJSONResponse(writer, accesses.toString());

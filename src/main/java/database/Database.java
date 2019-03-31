@@ -72,7 +72,6 @@ public class Database implements Access<String, Resource> {
             }
             try(PreparedStatement preparedStatement = connection.prepareStatement(userAccess)){
                 preparedStatement.setString(1, name);
-                System.out.println(userAccess);
 
                 ResultSet resultSet = preparedStatement.executeQuery();
                 while (resultSet.next()){
