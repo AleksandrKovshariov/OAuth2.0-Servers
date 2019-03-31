@@ -64,10 +64,15 @@ public class Database implements Access<String, Resource> {
         try{
             String userAccess = this.userAccess;
             for(String s : params){
+                if(s.startsWith("access_type=")) {
+                    String acc = s.substring(s.indexOf("=") + 1);
+                    s = " access_type like " + "\'%" + acc + "%\'";
+                }
                 userAccess += " and " + s;
             }
             try(PreparedStatement preparedStatement = connection.prepareStatement(userAccess)){
                 preparedStatement.setString(1, name);
+                System.out.println(userAccess);
 
                 ResultSet resultSet = preparedStatement.executeQuery();
                 while (resultSet.next()){
