@@ -134,7 +134,7 @@ public class ResourceServ implements Runnable{
             if(urlParams == null){
                 accesses = getAccess();
             }else if(urlParams.containsKey("dirOnly")){
-                accesses = getAccess(urlParams.get("dirOnly"));
+                accesses = getAccess(urlParams.get("is_dir"));
             }else{
                 writer.write(ERROR400);
                 writer.flush();
