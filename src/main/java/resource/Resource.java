@@ -12,7 +12,7 @@ public class Resource {
     private String username;
 
 
-    public boolean isIdDir() {
+    public boolean isDir() {
         return idDir;
     }
 

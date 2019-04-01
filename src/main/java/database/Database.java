@@ -6,6 +6,7 @@ import resource.Resource;
 import resource.ResourceServ;
 
 import javax.naming.OperationNotSupportedException;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -22,6 +23,10 @@ public class Database implements Access<String, Resource> {
 
     private String userAccess = "select acc_path, is_dir, access_type from user_access" +
             " WHERE username = ? ";
+
+    private String addAccess = "insert into Accesses(acc_path,  is_dir, username, access_type) values(?, ?, ?, ?)";
+
+
 
     public Database(Connection connection) {
         this.connection = connection;
@@ -51,7 +56,22 @@ public class Database implements Access<String, Resource> {
 
 
     @Override
-    public void addAccess(Resource access) {
+    public void addAccess(Resource resource) {
+        try {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(addAccess)){
+                preparedStatement.setString(1,  ResourceServ.unixLikePath(resource.getPath().toString()));
+                preparedStatement.setBoolean(2, resource.isDir());
+                preparedStatement.setString(3, resource.getUsername());
+                String access_type = Arrays.toString(resource.getAccessTypes())
+                        .replaceAll("\\[|\\]| ", "");
+                preparedStatement.setString(4, access_type);
+                System.out.println(preparedStatement);
+                preparedStatement.execute();
+            }
+
+        }catch (SQLException e){
+            System.err.println(e);
+        }
 
     }
 
@@ -85,7 +105,6 @@ public class Database implements Access<String, Resource> {
                     for (int i = 0; i < accessTypes.length; i++) {
                         accessTypes[i] = AccessType.valueOf(accessTypesStr[i]);
                     }
-
                     Resource resource = new Resource(isDir, path, name, accessTypes);
                     list.add(resource);
                 }

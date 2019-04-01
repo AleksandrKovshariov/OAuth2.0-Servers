@@ -26,6 +26,7 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.sql.ResultSet;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -115,16 +116,16 @@ public class ResourceServ implements Runnable{
     private JSONObject getAccess(String... params) throws OperationNotSupportedException{
         List<Resource> resources = accessVerifier.getUserAccess(currentUsername, params);
         JSONObject accesses = new JSONObject();
-        List<String> pathes = resources.stream().map(Resource::getPath).filter(x -> Files.exists(x))
-                .map(x -> Files.isDirectory(x) ? x + "/" : x.toString())
-                .map(x -> unixLikePath(x).replaceFirst("resource/", ""))
-                .collect(Collectors.toList());
-
-        for (int i = 0; i < pathes.size(); i++) {
-            accesses.append("access", new JSONObject().put("path", pathes.get(i))
-                    .put("isDir", resources.get(i).isIdDir())
-                    .put("accessType", Arrays.toString(resources.get(i).getAccessTypes())));
+        for(Resource r : resources){
+            Path p = r.getPath();
+            if(Files.exists(p)){
+                String path = Files.isDirectory(p) ? p + "/" : p.toString();
+                path = unixLikePath(path).replaceFirst("resource/","");
+                accesses.append("access", new JSONObject().put("path", path)
+                        .put("isDir", r.isDir()).put("accessType", Arrays.toString(r.getAccessTypes())));
+            }
         }
+
         return accesses;
     }
 
@@ -196,8 +197,6 @@ public class ResourceServ implements Runnable{
     }
 
     private boolean verifyAccess(Resource resource){
-        System.out.println("Got a USERNAME: " + resource.getUsername());
-        System.out.println("Requested object: " + resource);
         return accessVerifier.hasAccess(resource);
     }
 
@@ -297,8 +296,8 @@ public class ResourceServ implements Runnable{
             String sizeStr = header.get("Content-Length");
             try{
                 int size = Integer.parseInt(sizeStr);
-                System.out.println(size);
                 trySaveFile(writer, path, Http.readBodyBytes(rawI, size));
+                accessVerifier.addAccess(new Resource(false, path, currentUsername, AccessType.values()));
             }catch (NumberFormatException | NullPointerException e){
                 logger.log(Level.WARNING, "Bad request");
                 writer.write(ERROR400);
