@@ -83,7 +83,7 @@ public class Database implements Access<String, Resource> {
                         accessTypes[i] = AccessType.valueOf(accessTypesStr[i]);
                     }
 
-                    Resource resource = new Resource(isDir, path, null, accessTypes);
+                    Resource resource = new Resource(isDir, path, name, accessTypes);
                     list.add(resource);
                 }
 

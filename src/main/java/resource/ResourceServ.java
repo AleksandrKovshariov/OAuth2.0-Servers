@@ -4,7 +4,9 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import javafx.animation.PathTransition;
 import org.json.JSONObject;
+import utils.FileSaver;
 import utils.FineLogger;
 import utils.Http;
 
@@ -237,7 +239,7 @@ public class ResourceServ implements Runnable{
                         doGet(writer, rawO, path);
                         break;
                     case "POST":
-                        doPost(writer, rawI, path);
+                        doPost(writer, rawI, path, header);
                         break;
                     default:
                         writer.write(NOT_IMPLEMENTED);
@@ -265,15 +267,37 @@ public class ResourceServ implements Runnable{
         }
     }
 
-    private void doPost(Writer writer, InputStream rawI, String request) throws IOException{
+    private void trySaveFile(Writer writer, Path path, byte[] bytes) throws IOException {
+        try{
+            FileSaver.save(path, bytes);
+        }catch (IOException e){
+            logger.log(Level.WARNING,"Error writing file");
+            writer.write(ERROR400);
+            Http.writeJSONResponse(writer, new JSONObject().put("error", "Bad request").toString());
+        }
+    }
+
+    private void doPost(Writer writer, InputStream rawI, String request, Map<String, String> header)
+            throws IOException{
+
         System.out.println(request);
+
         Path path = Http.getPathFromUrl(request);
+
         Resource resource = new Resource(false, path.getParent(), currentUsername, AccessType.WRITE);
         if(!verifyAccess(resource)){
             writer.write(UNAUTHORIZED);
-            writer.flush();
+            Http.writeJSONResponse(writer, new JSONObject().put("error", "Access denied").toString());
         }else{
-
+            String sizeStr = header.get("Content-Length");
+            try{
+                int size = Integer.parseInt(sizeStr);
+                trySaveFile(writer, path, Http.readBodyBytes(rawI, size));
+            }catch (NumberFormatException | NullPointerException e){
+                logger.log(Level.WARNING, "Bad request");
+                writer.write(ERROR400);
+                Http.writeJSONResponse(writer, new JSONObject().put("error", "Bad request").toString());
+            }
         }
     }
 
