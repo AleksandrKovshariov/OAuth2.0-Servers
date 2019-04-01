@@ -4,7 +4,6 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import javafx.animation.PathTransition;
 import org.json.JSONObject;
 import utils.FileSaver;
 import utils.FineLogger;
@@ -231,6 +230,7 @@ public class ResourceServ implements Runnable{
 
             Map<String, String> header = Http.readHeaderByte(rawI);
             String token = getToken(header);
+
             if(verifyToken(writer, token)) {
                 System.out.println("Token exist");
                 switch (requestType) {
