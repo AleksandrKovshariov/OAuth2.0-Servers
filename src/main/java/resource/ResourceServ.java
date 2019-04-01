@@ -99,7 +99,6 @@ public class ResourceServ implements Runnable{
     }
 
     private void send(Writer writer, OutputStream output, Path path) throws IOException{
-        System.out.println("Path" + path);
         if(Files.isDirectory(path)){
             sendDirectoryStructure(writer, path);
         }else{
@@ -129,11 +128,9 @@ public class ResourceServ implements Runnable{
         return accesses;
     }
 
-
     private void sendUserAccesses(Writer writer, Map<String, String> urlParams) throws IOException{
         try {
             JSONObject accesses;
-            System.out.println("Sending acc");
             if(urlParams == null){
                 accesses = getAccess();
             }else {
@@ -143,8 +140,7 @@ public class ResourceServ implements Runnable{
             }
             if(accesses.isEmpty()) {
                 writer.write(NOT_FOUND);
-                String json = new JSONObject().put("error", "User has no accesses").toString();
-                Http.writeJSONResponse(writer, json);
+                Http.writeJSONResponse(writer, USER_HAS_NO_ACCESSED);
                 return;
             }
             logger.log(Level.FINE, "Sending user accesses");
@@ -162,7 +158,7 @@ public class ResourceServ implements Runnable{
             if (!verifyAccess(resource)) {
                 logger.log(Level.FINE, "Access denied");
                 writer.write(UNAUTHORIZED);
-                Http.writeJSONResponse(writer, new JSONObject().put("error", "Access denied").toString());
+                Http.writeJSONResponse(writer, ACCESS_DENIED);
             }else {
                 send(writer, output, path);
             }
@@ -177,14 +173,14 @@ public class ResourceServ implements Runnable{
     private boolean verifyToken(Writer writer, String token) throws IOException{
         if(token == null){
             writer.write(ERROR400);
-            Http.writeJSONResponse(writer, new JSONObject().put("error", "AccessType token does not exist.").toString());
+            Http.writeJSONResponse(writer, ACCESSTYPE_TOKEN_NOT_EXIST);
             return false;
         }
         DecodedJWT decodedJWT = JWT.decode(token);
 
         if(!tokenIsValid(decodedJWT)){
             writer.write(ERROR400);
-            Http.writeJSONResponse(writer, new JSONObject().put("error", "AccessType token is invalid.").toString());
+            Http.writeJSONResponse(writer, ACCESSTYPE_TOKEN_INVALID);
             return false;
         }
         setCurrentUsername(decodedJWT.getClaim("username").asString());
@@ -272,7 +268,6 @@ public class ResourceServ implements Runnable{
             byte[] bytes = new byte[4096];
             int bytesRead = 0;
             try(OutputStream fout = new BufferedOutputStream(new FileOutputStream(path.toString()))) {
-                System.out.println("Created fout, preparing for read bytes");
                 while (bytesRead < size) {
                     int result = rawI.read(bytes, 0, 4096);
                     fout.write(bytes);
@@ -287,7 +282,7 @@ public class ResourceServ implements Runnable{
         }catch (IOException e){
             logger.log(Level.WARNING,"Error writing file");
             writer.write(ERROR400);
-            Http.writeJSONResponse(writer, new JSONObject().put("error", "Bad request").toString());
+            Http.writeJSONResponse(writer, BAD_REQUEST);
         }
     }
 
@@ -302,7 +297,7 @@ public class ResourceServ implements Runnable{
         if(!verifyAccess(resource)){
             logger.log(Level.WARNING, "Rights violated");
             writer.write(UNAUTHORIZED);
-            Http.writeJSONResponse(writer, new JSONObject().put("error", "Access denied").toString());
+            Http.writeJSONResponse(writer, ACCESS_DENIED);
         }else{
             String sizeStr = header.get("Content-Length");
             try{
@@ -311,9 +306,9 @@ public class ResourceServ implements Runnable{
                 System.out.println("Success");
                 accessVerifier.addAccess(new Resource(false, path, currentUsername, AccessType.values()));
             }catch (NumberFormatException | NullPointerException e){
-                logger.log(Level.WARNING, "Bad request");
+                logger.log(Level.WARNING, BAD_REQUEST);
                 writer.write(ERROR400);
-                Http.writeJSONResponse(writer, new JSONObject().put("error", "Bad request").toString());
+                Http.writeJSONResponse(writer, BAD_REQUEST);
             }
         }
     }

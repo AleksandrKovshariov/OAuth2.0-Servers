@@ -1,5 +1,7 @@
 package utils;
 
+import org.json.JSONObject;
+
 public class ServerConstants {
 
     public static final String OK = "HTTP/1.1 200 OK\r\n";
@@ -18,6 +20,13 @@ public class ServerConstants {
     public static final String NO_CONTENT = "HTTP/1.1 204 No Content\r\n";
     public static final String SERVER_ERROR= "HTTP/1.1 500 Internal authorization.Server Error\r\n";
     public static final String ERROR400= "HTTP/1.1 400 Not Found\r\n";
+
+    public static final String USER_HAS_NO_ACCESSED = new JSONObject().put("error", "User has no accesses").toString();
+    public static final String ACCESS_DENIED = new JSONObject().put("error", "Access denied").toString();
+    public static final String ACCESSTYPE_TOKEN_NOT_EXIST = new JSONObject().put("error", "AccessType token does not exist.").toString();
+    public static final String ACCESSTYPE_TOKEN_INVALID = new JSONObject().put("error", "AccessType token is invalid.").toString();
+    public static final String BAD_REQUEST = new JSONObject().put("error", "Bad request").toString();
+
 
 
 
