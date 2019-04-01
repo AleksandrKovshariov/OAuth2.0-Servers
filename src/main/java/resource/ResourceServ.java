@@ -269,7 +269,9 @@ public class ResourceServ implements Runnable{
 
     private void trySaveFile(Writer writer, Path path, byte[] bytes) throws IOException {
         try{
+            System.out.println("Saving file...");
             FileSaver.save(path, bytes);
+            System.out.println("Sending ok...");
             writer.write(OK);
             writer.flush();
             logger.fine("Saved file to: " + path);
