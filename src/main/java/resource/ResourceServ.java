@@ -215,7 +215,6 @@ public class ResourceServ implements Runnable{
             logger.log(Level.FINE, "File not found");
         }
     }
-
     @Override
     public void run() {
 
@@ -233,12 +232,14 @@ public class ResourceServ implements Runnable{
             Map<String, String> header = Http.readHeaderByte(rawI);
             String token = getToken(header);
             if(verifyToken(writer, token)) {
-
+                System.out.println("Token exist");
                 switch (requestType) {
                     case "GET":
+                        System.out.println("Doing doGet...");
                         doGet(writer, rawO, path);
                         break;
                     case "POST":
+                        System.out.println("Doing doPost...");
                         doPost(writer, rawI, path, header);
                         break;
                     default:
