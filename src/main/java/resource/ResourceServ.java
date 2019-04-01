@@ -267,11 +267,20 @@ public class ResourceServ implements Runnable{
         }
     }
 
-    private void trySaveFile(Writer writer, Path path, byte[] bytes) throws IOException {
+    private void trySaveFile(Writer writer, Path path, int size, InputStream rawI) throws IOException {
         try{
-            System.out.println("Saving file...");
-            FileSaver.save(path, bytes);
-            System.out.println("Sending ok...");
+            byte[] bytes = new byte[4096];
+            int bytesRead = 0;
+            try(OutputStream fout = new BufferedOutputStream(new FileOutputStream(path.toString()))) {
+                System.out.println("Created fout, preparing for read bytes");
+                while (bytesRead < size) {
+                    int result = rawI.read(bytes, 0, 4096);
+                    fout.write(bytes);
+                    if (result == -1) break;
+                    bytesRead += result;
+                }
+                fout.flush();
+            }
             writer.write(OK);
             writer.flush();
             logger.fine("Saved file to: " + path);
@@ -297,19 +306,8 @@ public class ResourceServ implements Runnable{
         }else{
             String sizeStr = header.get("Content-Length");
             try{
-                System.out.println("In try");
                 int size = Integer.parseInt(sizeStr);
-                byte[] bytes = new byte[1024];
-                int bytesRead = 0;
-                FileOutputStream fout = new FileOutputStream(path.toString());
-                System.out.println("Created fout, preparing for read bytes");
-                while(bytesRead < size) {
-                    int result = rawI.read(bytes, 0, 1024);
-                    fout.write(bytes);
-                    if(result == -1) break;
-                    bytesRead += result;
-                }
-                fout.close();
+                trySaveFile(writer, path, size, rawI);
                 System.out.println("Success");
                 accessVerifier.addAccess(new Resource(false, path, currentUsername, AccessType.values()));
             }catch (NumberFormatException | NullPointerException e){
