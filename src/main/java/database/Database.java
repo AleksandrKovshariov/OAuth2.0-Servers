@@ -84,7 +84,6 @@ public class Database implements Access<String, Resource> {
                     }
 
                     Resource resource = new Resource(isDir, path, null, accessTypes);
-                    System.out.println(resource);
                     list.add(resource);
                 }
 

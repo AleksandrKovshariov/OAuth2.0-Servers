@@ -15,7 +15,7 @@ public class ServerConstants {
     public static final String MOVED_PERMANENTLY = "HTTP/1.1 301 Moved Permanently\r\n";
     public static final String LOCATION = "Location: ";
     public static final String NOT_FOUND = "HTTP/1.1 404 Not Found\r\n";
-    public static final String NO_CONTENT = "HTTP/1.1 204 NO CONTENT\r\n";
+    public static final String NO_CONTENT = "HTTP/1.1 204 No Content\r\n";
     public static final String SERVER_ERROR= "HTTP/1.1 500 Internal authorization.Server Error\r\n";
     public static final String ERROR400= "HTTP/1.1 400 Not Found\r\n";
 

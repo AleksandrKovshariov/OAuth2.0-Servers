@@ -131,6 +131,7 @@ public class ResourceServ implements Runnable{
     private void sendUserAccesses(Writer writer, Map<String, String> urlParams) throws IOException{
         try {
             JSONObject accesses;
+            System.out.println("Sending acc");
             if(urlParams == null){
                 accesses = getAccess();
             }else {
@@ -139,8 +140,9 @@ public class ResourceServ implements Runnable{
                 accesses = getAccess(keyVals);
             }
             if(accesses.isEmpty()) {
-                writer.write(NO_CONTENT);
-                writer.flush();
+                writer.write(NOT_FOUND);
+                String json = new JSONObject().put("error", "User has no accesses").toString();
+                Http.writeJSONResponse(writer, json);
                 return;
             }
             logger.log(Level.FINE, "Sending user accesses");
@@ -158,7 +160,7 @@ public class ResourceServ implements Runnable{
             if (!verifyAccess(resource)) {
                 logger.log(Level.FINE, "Access denied");
                 writer.write(UNAUTHORIZED);
-                writer.flush();
+                Http.writeJSONResponse(writer, new JSONObject().put("error", "Access denied").toString());
             }else {
                 send(writer, output, path);
             }
@@ -171,7 +173,6 @@ public class ResourceServ implements Runnable{
 
 
     private boolean verifyToken(Writer writer, String token) throws IOException{
-
         if(token == null){
             writer.write(ERROR400);
             Http.writeJSONResponse(writer, new JSONObject().put("error", "AccessType token does not exist.").toString());
@@ -194,7 +195,7 @@ public class ResourceServ implements Runnable{
     }
 
     private boolean verifyAccess(Resource resource){
-        System.out.println("Got a username: " + resource.getUsername());
+        System.out.println("Got a USERNAME: " + resource.getUsername());
         System.out.println("Requested object: " + resource);
         return accessVerifier.hasAccess(resource);
     }

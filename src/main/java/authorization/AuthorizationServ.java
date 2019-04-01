@@ -67,7 +67,7 @@ public class AuthorizationServ implements Runnable{
 
 
     private static boolean containsAll(Map<String, String> map){
-        return map.containsKey("password") && map.containsKey("username") && map.containsKey("grant_type")
+        return map.containsKey("PASSWORD") && map.containsKey("USERNAME") && map.containsKey("grant_type")
                 && map.containsKey("client_secret") && map.containsKey("client_id");
     }
 
@@ -78,7 +78,7 @@ public class AuthorizationServ implements Runnable{
     private String generateToken(String username){
         Claims claims = Jwts.claims();
         claims.put("iss", "sample-auth-server");
-        claims.put("username", username);
+        claims.put("USERNAME", username);
 
         return  Jwts.builder().setClaims(claims).signWith(SignatureAlgorithm.RS256, privateKey).compact();
     }
@@ -98,13 +98,13 @@ public class AuthorizationServ implements Runnable{
             logger.log(Level.CONFIG, "Invalid request");
             writer.write(ERROR400);
             Http.writeJSONResponse(writer, INVALID_REQUEST);
-        }else if(!authenticateUser(map.get("username"), map.get("password"))){
+        }else if(!authenticateUser(map.get("USERNAME"), map.get("PASSWORD"))){
             logger.log(Level.FINE, "Authentication failed");
             writer.write(UNAUTHORIZED);
             Http.writeJSONResponse(writer, UNAUTHORIZED);
         }else{
             logger.log(Level.FINER, "Sent OK");
-            String token = generateToken(map.get("username"));
+            String token = generateToken(map.get("USERNAME"));
             writer.write(OK);
             Http.writeJSONResponse(writer,
                     new JSONObject().put("access_token", token)
