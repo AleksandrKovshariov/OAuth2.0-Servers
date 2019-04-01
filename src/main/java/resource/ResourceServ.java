@@ -270,6 +270,9 @@ public class ResourceServ implements Runnable{
     private void trySaveFile(Writer writer, Path path, byte[] bytes) throws IOException {
         try{
             FileSaver.save(path, bytes);
+            writer.write(OK);
+            writer.flush();
+            logger.fine("Saved file to: " + path);
         }catch (IOException e){
             logger.log(Level.WARNING,"Error writing file");
             writer.write(ERROR400);
@@ -283,15 +286,17 @@ public class ResourceServ implements Runnable{
         System.out.println(request);
 
         Path path = Http.getPathFromUrl(request);
-
-        Resource resource = new Resource(false, path.getParent(), currentUsername, AccessType.WRITE);
+        System.out.println("Parent " + path.getParent());
+        Resource resource = new Resource(true, path.getParent(), currentUsername, AccessType.WRITE);
         if(!verifyAccess(resource)){
+            logger.log(Level.WARNING, "Rights violated");
             writer.write(UNAUTHORIZED);
             Http.writeJSONResponse(writer, new JSONObject().put("error", "Access denied").toString());
         }else{
             String sizeStr = header.get("Content-Length");
             try{
                 int size = Integer.parseInt(sizeStr);
+                System.out.println(size);
                 trySaveFile(writer, path, Http.readBodyBytes(rawI, size));
             }catch (NumberFormatException | NullPointerException e){
                 logger.log(Level.WARNING, "Bad request");

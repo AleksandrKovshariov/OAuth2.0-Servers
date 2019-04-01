@@ -18,7 +18,7 @@ import java.util.List;
 public class Database implements Access<String, Resource> {
     private Connection connection;
     private String usernameAccess = "select * from user_access" +
-            " WHERE username = ? and acc_path = ? and is_dir = ?";
+            " WHERE username = ? and acc_path = ? and is_dir = ? and access_type like ?";
 
     private String userAccess = "select acc_path, is_dir, access_type from user_access" +
             " WHERE username = ? ";
@@ -36,6 +36,9 @@ public class Database implements Access<String, Resource> {
                 preparedStatement.setString(1, resource.getUsername());
                 preparedStatement.setString(2, unixLikePath);
                 preparedStatement.setBoolean(3, Files.isDirectory(resource.getPath()));
+                preparedStatement.setString(4, Arrays.toString(resource.getAccessTypes())
+                        .replaceAll("\\[|\\]", "%"));
+                System.out.println(preparedStatement);
                 ResultSet result = preparedStatement.executeQuery();
                 return result.first();
             }
