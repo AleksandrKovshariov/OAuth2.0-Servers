@@ -297,8 +297,20 @@ public class ResourceServ implements Runnable{
         }else{
             String sizeStr = header.get("Content-Length");
             try{
+                System.out.println("In try");
                 int size = Integer.parseInt(sizeStr);
-                trySaveFile(writer, path, Http.readBodyBytes(rawI, size));
+                byte[] bytes = new byte[1024];
+                int bytesRead = 0;
+                FileOutputStream fout = new FileOutputStream(path.toString());
+                System.out.println("Created fout, preparing for read bytes");
+                while(bytesRead < size) {
+                    int result = rawI.read(bytes, 0, 1024);
+                    fout.write(bytes);
+                    if(result == -1) break;
+                    bytesRead += result;
+                }
+                fout.close();
+                System.out.println("Success");
                 accessVerifier.addAccess(new Resource(false, path, currentUsername, AccessType.values()));
             }catch (NumberFormatException | NullPointerException e){
                 logger.log(Level.WARNING, "Bad request");
