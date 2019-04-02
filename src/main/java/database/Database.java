@@ -26,6 +26,9 @@ public class Database implements Access<String, Resource> {
 
     private String addAccess = "insert into Accesses(acc_path,  is_dir, username, access_type) values(?, ?, ?, ?)";
 
+    private String deleteAccess = "delete from accesses " +
+            " where acc_path = ? and is_dir = ?";
+
 
 
     public Database(Connection connection) {
@@ -76,7 +79,20 @@ public class Database implements Access<String, Resource> {
     }
 
     @Override
-    public void deleteAccess(Resource access) {
+    public void deleteAccess(Resource resource) {
+
+        try {
+            try (PreparedStatement preparedStatement = connection.prepareStatement(deleteAccess)){
+                String unixLikePath = ResourceServ.unixLikePath(resource.getPath().toString());
+                preparedStatement.setString(1,unixLikePath);
+                preparedStatement.setBoolean(2, resource.isDir());
+                System.out.println(preparedStatement);
+                preparedStatement.execute();
+            }
+
+        }catch (SQLException e){
+            System.err.println(e);
+        }
 
     }
 

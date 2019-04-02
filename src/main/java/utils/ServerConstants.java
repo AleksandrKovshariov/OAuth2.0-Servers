@@ -27,6 +27,8 @@ public class ServerConstants {
     public static final String ACCESSTYPE_TOKEN_INVALID = new JSONObject().put("error", "AccessType token is invalid.").toString();
     public static final String BAD_REQUEST = new JSONObject().put("error", "Bad request").toString();
     public static final String FILE_NOT_FOUND = new JSONObject().put("error", "File not found").toString();
+    public static final String DIR_NOT_EMPTY = new JSONObject().put("error", "Folder must be empty to delete").toString();
+    public static final String DELETED = new JSONObject().put("error", "Deleted successfully").toString();
 
 
 

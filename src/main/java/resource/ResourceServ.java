@@ -17,9 +17,7 @@ import java.io.*;
 import java.net.Socket;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -225,6 +223,42 @@ public class ResourceServ implements Runnable{
             logger.log(Level.FINE, "File not found");
         }
     }
+    private void deleteFile(Path path) throws IOException{
+        try {
+            Files.delete(path);
+        }catch (NoSuchFileException e){
+            logger.log(Level.CONFIG, "Deleting file not found", e);
+        }
+    }
+    private void deleteResource(Writer writer, Resource resource) throws IOException{
+        Path path = resource.getPath();
+        try{
+            deleteFile(path);
+        }catch (DirectoryNotEmptyException e){
+            writer.write(ERROR400);
+            Http.writeJSONResponse(writer, DIR_NOT_EMPTY);
+            return;
+        }
+        accessVerifier.deleteAccess(resource);
+        writer.write(OK);
+        Http.writeJSONResponse(writer, DELETED);
+
+    }
+
+    private void doDelete(Writer writer, String request) throws IOException{
+        Path path = Http.getPathFromUrl(request);
+        Resource resource = new Resource(Files.isDirectory(path), path, currentUsername, AccessType.DELETE);
+        if((request.startsWith("resource"))) {
+            if (!verifyAccess(resource)) {
+                logger.log(Level.WARNING, "Access denied");
+                writer.write(UNAUTHORIZED);
+                Http.writeJSONResponse(writer, ACCESS_DENIED);
+            }else{
+                deleteResource(writer, resource);
+            }
+        }
+
+    }
     @Override
     public void run() {
 
@@ -252,6 +286,10 @@ public class ResourceServ implements Runnable{
                     case "POST":
                         System.out.println("Doing doPost...");
                         doPost(writer, rawI, path, header);
+                        break;
+                    case "DELETE":
+                        System.out.println("Doing delete");
+                        doDelete(writer, path);
                         break;
                     default:
                         writer.write(NOT_IMPLEMENTED);
