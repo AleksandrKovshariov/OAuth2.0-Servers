@@ -202,7 +202,6 @@ public class ResourceServ implements Runnable{
         try(InputStream fin = new BufferedInputStream(new FileInputStream(file.toString()))){
             byte[] bytes = new byte[1024];
             while (fin.read(bytes) != -1){
-                System.out.println("Writing bytes");
                 rawO.write(bytes);
             }
             System.out.println("Flushing...");
