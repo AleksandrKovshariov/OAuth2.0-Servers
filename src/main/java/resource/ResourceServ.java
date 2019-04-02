@@ -241,8 +241,7 @@ public class ResourceServ implements Runnable{
         }
         accessVerifier.deleteAccess(resource);
         writer.write(OK);
-        Http.writeJSONResponse(writer, DELETED);
-
+        writer.flush();
     }
 
     private void doDelete(Writer writer, String request) throws IOException{
@@ -323,11 +322,12 @@ public class ResourceServ implements Runnable{
             int bytesRead = 0;
             try(OutputStream fout = new BufferedOutputStream(new FileOutputStream(path.toString()))) {
                 while (bytesRead < size) {
-                    int result = rawI.read(bytes, 0, 4096);
+                    int result = rawI.read(bytes);
                     fout.write(bytes);
                     if (result == -1) break;
                     bytesRead += result;
                 }
+                System.out.println("Readed = " + bytesRead);
                 fout.flush();
             }
             writer.write(OK);
@@ -354,6 +354,7 @@ public class ResourceServ implements Runnable{
             Http.writeJSONResponse(writer, ACCESS_DENIED);
         }else{
             String sizeStr = header.get("Content-Length");
+            System.out.println("Size = " + sizeStr);
             try{
                 int size = Integer.parseInt(sizeStr);
                 trySaveFile(writer, path, size, rawI);
