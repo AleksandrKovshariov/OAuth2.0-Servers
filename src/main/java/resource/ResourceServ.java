@@ -322,8 +322,8 @@ public class ResourceServ implements Runnable{
             try(OutputStream fout = new BufferedOutputStream(new FileOutputStream(path.toString()))) {
                 while (bytesRead < size) {
                     int result = rawI.read();
-                    fout.write(result);
                     if (result == -1) break;
+                    fout.write(result);
                     bytesRead ++;
                 }
                 System.out.println("Readed = " + bytesRead);
