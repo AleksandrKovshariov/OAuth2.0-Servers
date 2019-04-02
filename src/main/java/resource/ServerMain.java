@@ -36,7 +36,7 @@ public class ServerMain {
             System.exit(-1);
         }
 
-        Server server = new Server(port, 0, InetAddress.getLoopbackAddress());
+        Server server = new Server(port, 0, InetAddress.getLocalHost());
         server.start();
     }
 }
