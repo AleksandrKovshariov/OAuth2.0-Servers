@@ -98,8 +98,9 @@ public class ResourceServ implements Runnable{
 
     }
 
-    private void send(Writer writer, OutputStream output, Path path) throws IOException{
-        if(Files.isDirectory(path)){
+    private void send(Writer writer, OutputStream output, Resource resource) throws IOException{
+        Path path = resource.getPath();
+        if(resource.isDir()){
             sendDirectoryStructure(writer, path);
         }else{
             String contentType = URLConnection.getFileNameMap().getContentTypeFor(path.getFileName().toString());
@@ -153,14 +154,14 @@ public class ResourceServ implements Runnable{
 
     private void doGet(Writer writer, OutputStream output, String request) throws IOException{
         Path path = Http.getPathFromUrl(request);
+        Resource resource = new Resource(Files.isDirectory(path), path, currentUsername, AccessType.READ);
         if((request.startsWith("resource"))) {
-            Resource resource = new Resource(Files.isDirectory(path), path, currentUsername, AccessType.READ);
             if (!verifyAccess(resource)) {
                 logger.log(Level.FINE, "Access denied");
                 writer.write(UNAUTHORIZED);
                 Http.writeJSONResponse(writer, ACCESS_DENIED);
             }else {
-                send(writer, output, path);
+                send(writer, output, resource);
             }
         }
         else if(request.startsWith("access")) {
