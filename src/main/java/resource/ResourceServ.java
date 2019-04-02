@@ -197,16 +197,29 @@ public class ResourceServ implements Runnable{
         return accessVerifier.hasAccess(resource);
     }
 
+    private void sendBytes(OutputStream rawO, Path file) throws IOException{
+        try(InputStream fin = new BufferedInputStream(new FileInputStream(file.toString()))){
+            byte[] bytes = new byte[1024];
+            while (fin.read(bytes) != -1){
+                rawO.write(bytes);
+            }
+            rawO.flush();
+        }
+    }
+
     private void sendFile(Writer writer, OutputStream rawO, String contentType, Path file) throws IOException{
         if(Files.exists(file) && Files.isReadable(file)) {
             Http.writeHeader(writer, Files.size(file), contentType);
             writer.flush();
-            rawO.write(Files.readAllBytes(file));
-            rawO.flush();
+            try{
+                sendBytes(rawO, file);
+            }catch (IOException e){
+                logger.log(Level.WARNING, "Error sending file", e);
+            }
             logger.fine("Sent " + file.toAbsolutePath() + " to client " + client.getInetAddress());
         }else {
             writer.write(NOT_FOUND);
-            writer.flush();
+            Http.writeJSONResponse(writer, FILE_NOT_FOUND);
             logger.log(Level.FINE, "File not found");
         }
     }

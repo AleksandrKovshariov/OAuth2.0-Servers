@@ -26,6 +26,7 @@ public class ServerConstants {
     public static final String ACCESSTYPE_TOKEN_NOT_EXIST = new JSONObject().put("error", "AccessType token does not exist.").toString();
     public static final String ACCESSTYPE_TOKEN_INVALID = new JSONObject().put("error", "AccessType token is invalid.").toString();
     public static final String BAD_REQUEST = new JSONObject().put("error", "Bad request").toString();
+    public static final String FILE_NOT_FOUND = new JSONObject().put("error", "File not found").toString();
 
 
 
