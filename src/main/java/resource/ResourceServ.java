@@ -198,11 +198,14 @@ public class ResourceServ implements Runnable{
     }
 
     private void sendBytes(OutputStream rawO, Path file) throws IOException{
+        System.out.println("Sendding file...");
         try(InputStream fin = new BufferedInputStream(new FileInputStream(file.toString()))){
             byte[] bytes = new byte[1024];
             while (fin.read(bytes) != -1){
+                System.out.println("Writing bytes");
                 rawO.write(bytes);
             }
+            System.out.println("Flushing...");
             rawO.flush();
         }
     }
