@@ -11,10 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 public class Database implements Access<String, Resource> {
     private Connection connection;
@@ -96,20 +93,31 @@ public class Database implements Access<String, Resource> {
 
     }
 
+    private static String modifyWithParams(Map<String, String> params, String query){
+
+        if(params == null)
+            return query;
+
+        for(String s : params.keySet()){
+            if(s.equals("access_type")) {
+                s = " and access_type like \'%" + params.get(s) + "%\'";
+            }else{
+                s = " and " + s + " = " + params.get(s);
+            }
+            query +=  s;
+        }
+        System.out.println(query);
+        return  query;
+    }
+
     //refactor....
     @Override
-    public List<Resource> getUserAccess(String name, String... params){
+    public List<Resource> getUserAccess(String name, Map<String, String> params){
         List<Resource> list = new ArrayList<>();
         try{
-            String userAccess = this.userAccess;
-            for(String s : params){
-                if(s.startsWith("access_type=")) {
-                    String acc = s.substring(s.indexOf("=") + 1);
-                    s = " access_type like " + "\'%" + acc + "%\'";
-                }
-                userAccess += " and " + s;
-            }
-            try(PreparedStatement preparedStatement = connection.prepareStatement(userAccess)){
+            String userAccessQuery = modifyWithParams(params, this.userAccess);
+
+            try(PreparedStatement preparedStatement = connection.prepareStatement(userAccessQuery)){
                 preparedStatement.setString(1, name);
 
                 ResultSet resultSet = preparedStatement.executeQuery();

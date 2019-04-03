@@ -2,6 +2,7 @@ package resource;
 
 import javax.naming.OperationNotSupportedException;
 import java.util.List;
+import java.util.Map;
 
 public interface Access<T, V> {
 
@@ -9,7 +10,7 @@ public interface Access<T, V> {
     void addAccess(V access);
     void deleteAccess(V access);
 
-    default List<V> getUserAccess(T name, String... params) throws OperationNotSupportedException {
+    default List<V> getUserAccess(T name, Map<String, String> params) throws OperationNotSupportedException {
         throw new OperationNotSupportedException();
     }
 }

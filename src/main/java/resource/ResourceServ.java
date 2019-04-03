@@ -5,7 +5,6 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import org.json.JSONObject;
-import utils.FileSaver;
 import utils.FineLogger;
 import utils.Http;
 
@@ -24,13 +23,11 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
-import java.sql.ResultSet;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ResourceServ implements Runnable{
@@ -63,7 +60,7 @@ public class ResourceServ implements Runnable{
         this.accessVerifier = accessVerifier;
     }
 
-    private String formJsonFile(Path path){
+    private String formJsonResource(Path path){
         long lastModified = 0;
         long size = 0;
         try {
@@ -85,21 +82,25 @@ public class ResourceServ implements Runnable{
                 .toString();
     }
 
-    private void sendDirectoryStructure(Writer writer, Path path) throws IOException{
+    private void sendDirectoryStructure(Writer writer, Resource resource, Map<String, String> urlParams) throws IOException{
         JSONObject jsonObject = new JSONObject();
-        try(Stream<Path> paths = Files.list(path)){
-            paths.forEach(x -> jsonObject.append("files", formJsonFile(x)));
+
+        try(Stream<Path> paths = Files.list(resource.getPath())){
+            paths.forEach(x -> jsonObject.append("files", formJsonResource(x)));
         }
+
         writer.write(OK);
         writer.write("Type: directory" + NEW_LINE);
         Http.writeJSONResponse(writer, jsonObject.toString());
 
     }
 
-    private void send(Writer writer, OutputStream output, Resource resource) throws IOException{
+    private void send(Writer writer, OutputStream output, Resource resource, Map<String,String> urlParams)
+            throws IOException{
         Path path = resource.getPath();
+
         if(resource.isDir()){
-            sendDirectoryStructure(writer, path);
+            sendDirectoryStructure(writer, resource, urlParams);
         }else{
             String contentType = URLConnection.getFileNameMap().getContentTypeFor(path.getFileName().toString());
             sendFile(writer, output, contentType, path);
@@ -111,8 +112,8 @@ public class ResourceServ implements Runnable{
     }
 
 
-    private JSONObject getAccess(String... params) throws OperationNotSupportedException{
-        List<Resource> resources = accessVerifier.getUserAccess(currentUsername, params);
+    private JSONObject getAccess(Map<String, String> urlParams) throws OperationNotSupportedException{
+        List<Resource> resources = accessVerifier.getUserAccess(currentUsername, urlParams);
         JSONObject accesses = new JSONObject();
         for(Resource r : resources){
             Path p = r.getPath();
@@ -130,13 +131,7 @@ public class ResourceServ implements Runnable{
     private void sendUserAccesses(Writer writer, Map<String, String> urlParams) throws IOException{
         try {
             JSONObject accesses;
-            if(urlParams == null){
-                accesses = getAccess();
-            }else {
-                String[] keyVals
-                        = urlParams.keySet().stream().map(x -> x + "=" + urlParams.get(x)).toArray(String[]::new);
-                accesses = getAccess(keyVals);
-            }
+            accesses = getAccess(urlParams);
             if(accesses.isEmpty()) {
                 writer.write(NOT_FOUND);
                 Http.writeJSONResponse(writer, USER_HAS_NO_ACCESSED);
@@ -153,17 +148,17 @@ public class ResourceServ implements Runnable{
     private void doGet(Writer writer, OutputStream output, String request) throws IOException{
         Path path = Http.getPathFromUrl(request);
         Resource resource = new Resource(Files.isDirectory(path), path, currentUsername, AccessType.READ);
+        Map<String, String> urlParams = Http.parseUrlParams(request);
         if((request.startsWith("resource"))) {
             if (!verifyAccess(resource)) {
                 logger.log(Level.FINE, "Access denied");
                 writer.write(UNAUTHORIZED);
                 Http.writeJSONResponse(writer, ACCESS_DENIED);
             }else {
-                send(writer, output, resource);
+                send(writer, output, resource, urlParams);
             }
         }
         else if(request.startsWith("access")) {
-            Map<String, String> urlParams = Http.parseUrlParams(request);
             sendUserAccesses(writer, urlParams);
         }
     }
