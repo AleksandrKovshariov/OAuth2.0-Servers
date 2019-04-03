@@ -63,7 +63,7 @@ public class Http {
 
     public static Path getPathFromUrl(String url){
         if(url.contains("?"))
-            return Paths.get(url.substring(url.indexOf('?') + 1));
+            return Paths.get(url.substring(0, url.indexOf('?') - 1));
         return Paths.get(url);
     }
 

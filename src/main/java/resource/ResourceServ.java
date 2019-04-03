@@ -149,6 +149,7 @@ public class ResourceServ implements Runnable{
         Path path = Http.getPathFromUrl(request);
         Resource resource = new Resource(Files.isDirectory(path), path, currentUsername, AccessType.READ);
         Map<String, String> urlParams = Http.parseUrlParams(request);
+        System.out.println(path);
         if((request.startsWith("resource"))) {
             if (!verifyAccess(resource)) {
                 logger.log(Level.FINE, "Access denied");

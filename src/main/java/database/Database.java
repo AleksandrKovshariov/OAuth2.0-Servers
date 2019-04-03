@@ -94,6 +94,7 @@ public class Database implements Access<String, Resource> {
     }
 
     private static String modifyWithParams(Map<String, String> params, String query){
+        System.out.println(params);
         for(String s : params.keySet()){
             switch (s){
                 case "access_type":
@@ -109,7 +110,6 @@ public class Database implements Access<String, Resource> {
             }
             query +=  s;
         }
-        System.out.println(query);
         return  query;
     }
 
@@ -124,6 +124,7 @@ public class Database implements Access<String, Resource> {
                 preparedStatement.setString(1, name);
 
                 ResultSet resultSet = preparedStatement.executeQuery();
+                System.out.println(preparedStatement);
                 while (resultSet.next()){
                     Path path = Paths.get(resultSet.getString(1));
                     boolean isDir = resultSet.getBoolean(2);
