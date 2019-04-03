@@ -94,15 +94,18 @@ public class Database implements Access<String, Resource> {
     }
 
     private static String modifyWithParams(Map<String, String> params, String query){
-
-        if(params == null)
-            return query;
-
         for(String s : params.keySet()){
-            if(s.equals("access_type")) {
-                s = " and access_type like \'%" + params.get(s) + "%\'";
-            }else{
-                s = " and " + s + " = " + params.get(s);
+            switch (s){
+                case "access_type":
+                    s = " and access_type like \'%" + params.get(s) + "%\'";
+                    break;
+                case "path":
+                    String path = params.get(s);
+                    s = " and acc_path like \'" + path
+                            + "%\' and INSTR(SUBSTRING(acc_path, length('" + path + "') + 1), '/') = 0";
+                    break;
+                default:
+                    s = " and " + s + " = " + params.get(s);
             }
             query +=  s;
         }

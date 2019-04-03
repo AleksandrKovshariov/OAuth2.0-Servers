@@ -57,9 +57,8 @@ public class Http {
                 if(keyVals.length == 2)
                     map.put(keyVals[0], keyVals[1]);
             }
-            return map;
         }
-        return null;
+        return map;
     }
 
     public static Path getPathFromUrl(String url){

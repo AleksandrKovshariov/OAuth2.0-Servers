@@ -23,11 +23,10 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ResourceServ implements Runnable{
@@ -60,9 +59,10 @@ public class ResourceServ implements Runnable{
         this.accessVerifier = accessVerifier;
     }
 
-    private String formJsonResource(Path path){
+    private JSONObject formJsonResource(Resource resource){
         long lastModified = 0;
         long size = 0;
+        Path path = resource.getPath();
         try {
             lastModified = Files.getLastModifiedTime(path).toMillis();
             size = Files.size(path);
@@ -71,7 +71,7 @@ public class ResourceServ implements Runnable{
         }
 
         String fileName = path.getFileName().toString();
-        boolean isDir = Files.isDirectory(path);
+        boolean isDir = resource.isDir();
         String pathWithoutRes = unixLikePath(path.toString()).replaceFirst("resource/","");
         return new JSONObject()
                 .put("name", fileName)
@@ -79,15 +79,18 @@ public class ResourceServ implements Runnable{
                 .put("modified", lastModified)
                 .put("isDir", isDir)
                 .put("path", isDir ? (pathWithoutRes + "/") : pathWithoutRes)
-                .toString();
+                .put("accessType", resource.getAccessTypes());
     }
 
     private void sendDirectoryStructure(Writer writer, Resource resource, Map<String, String> urlParams) throws IOException{
         JSONObject jsonObject = new JSONObject();
+        Path path = resource.getPath();
+        urlParams.put("path", unixLikePath(path.toString()) + "/");
 
-        try(Stream<Path> paths = Files.list(resource.getPath())){
-            paths.forEach(x -> jsonObject.append("files", formJsonResource(x)));
-        }
+        List<Resource> accessibleResources
+                = new ArrayList<>(accessVerifier.getUserAccess(resource.getUsername(), urlParams));
+        accessibleResources.stream().filter(x -> Files.exists(x.getPath()))
+                .forEach(x -> jsonObject.append("files", formJsonResource(x).toString()));
 
         writer.write(OK);
         writer.write("Type: directory" + NEW_LINE);
@@ -112,7 +115,8 @@ public class ResourceServ implements Runnable{
     }
 
 
-    private JSONObject getAccess(Map<String, String> urlParams) throws OperationNotSupportedException{
+    private JSONObject getAccess(Map<String, String> urlParams)
+    {
         List<Resource> resources = accessVerifier.getUserAccess(currentUsername, urlParams);
         JSONObject accesses = new JSONObject();
         for(Resource r : resources){
@@ -129,20 +133,16 @@ public class ResourceServ implements Runnable{
     }
 
     private void sendUserAccesses(Writer writer, Map<String, String> urlParams) throws IOException{
-        try {
-            JSONObject accesses;
-            accesses = getAccess(urlParams);
-            if(accesses.isEmpty()) {
-                writer.write(NOT_FOUND);
-                Http.writeJSONResponse(writer, USER_HAS_NO_ACCESSED);
-                return;
-            }
-            logger.log(Level.FINE, "Sending user accesses");
-            writer.write(OK);
-            Http.writeJSONResponse(writer, accesses.toString());
-        }catch (OperationNotSupportedException e){
-            logger.log(Level.CONFIG, "Can't send user accesses", e);
+        JSONObject accesses;
+        accesses = getAccess(urlParams);
+        if(accesses.isEmpty()) {
+            writer.write(NOT_FOUND);
+            Http.writeJSONResponse(writer, USER_HAS_NO_ACCESSED);
+            return;
         }
+        logger.log(Level.FINE, "Sending user accesses");
+        writer.write(OK);
+        Http.writeJSONResponse(writer, accesses.toString());
     }
 
     private void doGet(Writer writer, OutputStream output, String request) throws IOException{
