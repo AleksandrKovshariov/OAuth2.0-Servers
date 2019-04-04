@@ -315,12 +315,13 @@ public class ResourceServ implements Runnable{
     private void trySaveFile(Writer writer, Path path, int size, InputStream rawI) throws IOException {
         try{
             int bytesRead = 0;
+            byte[] bytes = new byte[2048];
             try(OutputStream fout = new BufferedOutputStream(new FileOutputStream(path.toString()))) {
                 while (bytesRead < size) {
-                    int result = rawI.read();
+                    int result = rawI.read(bytes);
                     if (result == -1) break;
-                    fout.write(result);
-                    bytesRead ++;
+                    fout.write(bytes, 0, result);
+                    bytesRead += result;
                 }
                 System.out.println("Readed = " + bytesRead);
                 fout.flush();
