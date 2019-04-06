@@ -36,6 +36,7 @@ public class ResourceServ implements Runnable{
     private static Logger logger = FineLogger.getLogger(ResourceServ.class.getName());
     private static final PublicKey PUBLIC_KEY = loadPublicKey();
     private static final Algorithm ALGORITHM = Algorithm.RSA256((RSAPublicKey)PUBLIC_KEY, null);
+    private static final String baseHeader = "Access-Control-Allow-Origin:*" + NEW_LINE;
 
     private static PublicKey loadPublicKey() {
         try {
@@ -93,6 +94,7 @@ public class ResourceServ implements Runnable{
                 .forEach(x -> jsonObject.append("files", formJsonResource(x).toString()));
 
         writer.write(OK);
+        writer.write(baseHeader);
         writer.write("Type: directory" + NEW_LINE);
         Http.writeJSONResponse(writer, jsonObject.toString());
 
@@ -142,6 +144,7 @@ public class ResourceServ implements Runnable{
         }
         logger.log(Level.FINE, "Sending user accesses");
         writer.write(OK);
+        writer.write(baseHeader);
         Http.writeJSONResponse(writer, accesses.toString());
     }
 
@@ -237,6 +240,7 @@ public class ResourceServ implements Runnable{
         }
         accessVerifier.deleteAccess(resource);
         writer.write(OK);
+        writer.write(baseHeader);
         writer.flush();
     }
 
@@ -327,6 +331,7 @@ public class ResourceServ implements Runnable{
                 fout.flush();
             }
             writer.write(OK);
+            writer.write(baseHeader);
             writer.flush();
             logger.fine("Saved file to: " + path);
         }catch (IOException e){

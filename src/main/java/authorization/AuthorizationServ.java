@@ -106,7 +106,7 @@ public class AuthorizationServ implements Runnable{
             logger.log(Level.FINER, "Sent OK");
             String token = generateToken(map.get("username"));
             writer.write(OK);
-            writer.write("Access-Control-Allow-Origin:*");
+            writer.write("Access-Control-Allow-Origin:*" + NEW_LINE);
             Http.writeJSONResponse(writer,
                     new JSONObject().put("access_token", token)
                     .put("token_type", "bearer").toString());
