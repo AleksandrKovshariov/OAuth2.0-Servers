@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 import org.json.JSONObject;
 import utils.FineLogger;
 import utils.Http;
@@ -26,8 +27,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import org.apache.commons.fileupload.MultipartStream;
 
 public class ResourceServ implements Runnable{
     private Socket client;
@@ -340,11 +340,102 @@ public class ResourceServ implements Runnable{
             Http.writeJSONResponse(writer, BAD_REQUEST);
         }
     }
+    //For refactoring
+    private void writeMultipart(Writer writer, String content, InputStream rawI) throws IOException{
+        System.out.println("Parsing multipart");
+
+        String boundary = content.substring(content.indexOf("boundary=") + 9);
+        System.out.println("Boundary = " + boundary);
+        byte[] boundaryBytes = boundary.getBytes();
+
+        MultipartStream multipartStream = new MultipartStream(rawI, boundaryBytes);
+        boolean nextPart = multipartStream.skipPreamble();
+        boolean wasDir = false;
+        boolean exitNormally = true;
+        String toDir;
+        List<String> wroteFiles = new ArrayList<>();
+        while (nextPart){
+            String head = multipartStream.readHeaders();
+            int nameIndex = head.indexOf("name=") + 6;
+            String name = head.substring(nameIndex, head.indexOf("\"", nameIndex + 1));
+            System.out.println("Name = " + name);
+            if(wasDir && name.equalsIgnoreCase("file")){
+                int fileIndex = head.indexOf("filename=") + 10;
+                String fileName = ("resource/" + currentUsername + "/" +
+                        head.substring(fileIndex, head.indexOf("\"", fileIndex)))
+                                .replaceAll("[^a-zA-Z0-9_./-]", "");
+
+                wroteFiles.add(fileName.substring(9));
+                System.out.println("File name = " + fileName);
+                Path path = Paths.get(fileName);
+                if(!accessVerifier.hasAccess(
+                        new Resource(true, path.getParent(), currentUsername, AccessType.WRITE))){
+                    writer.write(UNAUTHORIZED);
+                    Http.writeJSONResponse(writer, ACCESS_DENIED);
+                    return;
+                }
+                try(FileOutputStream fout = new FileOutputStream(fileName)){
+                    multipartStream.readBodyData(fout);
+                }catch (IOException e){
+                    exitNormally = false;
+                    logger.log(Level.WARNING, "Can't save file", e);
+                }
+                accessVerifier.addAccess(new Resource(false,
+                        Paths.get(fileName), currentUsername, AccessType.values()));
+            }else if(name.equalsIgnoreCase("to_dir")){
+                ByteOutputStream dirStream = new ByteOutputStream();
+                multipartStream.readBodyData(dirStream);
+                toDir = new String(dirStream.getBytes());
+                System.out.println("to_dir " + toDir);
+                wasDir = true;
+            }
+            else {
+                exitNormally = false;
+                break;
+            }
+            nextPart = multipartStream.readBoundary();
+        }
+        if(exitNormally) {
+            writer.write(OK);
+            JSONObject jsonObject = new JSONObject();
+            wroteFiles.forEach(x -> jsonObject.append("saved", x));
+            Http.writeJSONResponse(writer, jsonObject.toString());
+        }else{
+            writer.write(ERROR400);
+            Http.writeJSONResponse(writer, BAD_REQUEST);
+        }
+
+
+        System.out.println("Success");
+    }
+
+    private void writeResource(Writer writer, Map<String, String> header, Path path, InputStream rawI)
+            throws IOException{
+        try{
+            String sizeStr = header.get("Content-Length");
+            int size = Integer.parseInt(sizeStr);
+            System.out.println("Size = " + sizeStr);
+            trySaveFile(writer, path, size, rawI);
+            System.out.println("Success");
+            accessVerifier.addAccess(new Resource(false, path, currentUsername, AccessType.values()));
+        }catch (NumberFormatException | NullPointerException e){
+            logger.log(Level.WARNING, BAD_REQUEST);
+            writer.write(ERROR400);
+            Http.writeJSONResponse(writer, BAD_REQUEST);
+        }
+    }
 
     private void doPost(Writer writer, InputStream rawI, String request, Map<String, String> header)
             throws IOException{
 
         System.out.println(request);
+
+
+        String content = header.get("Content-Type");
+        if(content != null && content.startsWith("multipart/form-data") && content.contains("boundary=")){
+            writeMultipart(writer, content, rawI);
+            return;
+        }
 
         Path path = Http.getPathFromUrl(request);
         System.out.println("Parent " + path.getParent());
@@ -354,18 +445,7 @@ public class ResourceServ implements Runnable{
             writer.write(UNAUTHORIZED);
             Http.writeJSONResponse(writer, ACCESS_DENIED);
         }else{
-            String sizeStr = header.get("Content-Length");
-            System.out.println("Size = " + sizeStr);
-            try{
-                int size = Integer.parseInt(sizeStr);
-                trySaveFile(writer, path, size, rawI);
-                System.out.println("Success");
-                accessVerifier.addAccess(new Resource(false, path, currentUsername, AccessType.values()));
-            }catch (NumberFormatException | NullPointerException e){
-                logger.log(Level.WARNING, BAD_REQUEST);
-                writer.write(ERROR400);
-                Http.writeJSONResponse(writer, BAD_REQUEST);
-            }
+            writeResource(writer, header, path, rawI);
         }
     }
 

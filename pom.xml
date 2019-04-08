@@ -51,7 +51,7 @@
         <dependency>
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
-            <version>8.0.15</version>
+            <version>5.1.43</version>
         </dependency>
 
         <dependency>
@@ -65,6 +65,15 @@
             <artifactId>java-jwt</artifactId>
             <version>3.8.0</version>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/com.liferay/org.apache.commons.fileupload -->
+        <dependency>
+            <groupId>com.liferay</groupId>
+            <artifactId>org.apache.commons.fileupload</artifactId>
+            <version>1.2.2.LIFERAY-PATCHED-1</version>
+        </dependency>
+
+
 
 
 
