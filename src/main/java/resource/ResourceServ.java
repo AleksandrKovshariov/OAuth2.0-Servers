@@ -4,12 +4,9 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 import org.json.JSONObject;
 import utils.FineLogger;
 import utils.Http;
-
-import javax.naming.OperationNotSupportedException;
 
 import static utils.ServerConstants.*;
 
@@ -383,9 +380,9 @@ public class ResourceServ implements Runnable{
                 accessVerifier.addAccess(new Resource(false,
                         Paths.get(fileName), currentUsername, AccessType.values()));
             }else if(name.equalsIgnoreCase("to_dir")){
-                ByteOutputStream dirStream = new ByteOutputStream();
+                ByteArrayOutputStream dirStream = new ByteArrayOutputStream();
                 multipartStream.readBodyData(dirStream);
-                toDir = new String(dirStream.getBytes());
+                toDir = dirStream.toString();
                 System.out.println("to_dir " + toDir);
                 wasDir = true;
             }
