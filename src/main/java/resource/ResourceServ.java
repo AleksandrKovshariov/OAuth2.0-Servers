@@ -401,8 +401,6 @@ public class ResourceServ implements Runnable{
             writer.write(ERROR400);
             Http.writeJSONResponse(writer, BAD_REQUEST);
         }
-
-
         System.out.println("Success");
     }
 
