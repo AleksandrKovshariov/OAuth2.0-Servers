@@ -1,5 +1,7 @@
 package authorization;
 
+import utils.FineLogger;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -15,18 +17,14 @@ public class Server {
     private final int port;
     private final int query;
     private final InetAddress address;
-    private static Logger errorLog = Logger.getLogger("Error");
-    private static Logger requests = Logger.getLogger("Requests");
+    private static Logger errorLog;
+    private static Logger requests;
 
     public static final int NUMBER_OF_THREADS = 10;
 
     static{
-        ConsoleHandler handler = new ConsoleHandler();
-        handler.setLevel(Level.ALL);
-        errorLog.setLevel(Level.ALL);
-        requests.setLevel(Level.ALL);
-        errorLog.addHandler(handler);
-        requests.addHandler(handler);
+        errorLog = FineLogger.getLogger("Error");
+        requests = FineLogger.getLogger("Requests");
     }
 
 

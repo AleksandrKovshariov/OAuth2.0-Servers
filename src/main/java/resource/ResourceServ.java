@@ -28,16 +28,17 @@ import org.apache.commons.fileupload.MultipartStream;
 
 public class ResourceServ implements Runnable{
     private Socket client;
-    private Access<String, Resource> accessVerifier;
+    private Access<String, Resource> access;
     private String currentUsername = null;
-    private static Logger logger = FineLogger.getLogger(ResourceServ.class.getName());
+    private static Logger logger = FineLogger.getLogger(ResourceServ.class.getName(), "logs/Resource.txt");
+    private static final Path PATH_TO_KEY = Paths.get("src", "main", "java", "resource", "public_der");
     private static final PublicKey PUBLIC_KEY = loadPublicKey();
     private static final Algorithm ALGORITHM = Algorithm.RSA256((RSAPublicKey)PUBLIC_KEY, null);
     private static final String baseHeader = "Access-Control-Allow-Origin:*" + NEW_LINE;
 
     private static PublicKey loadPublicKey() {
         try {
-            byte[] keyBytes = Files.readAllBytes(Paths.get("src", "main", "java", "resource", "public_der"));
+            byte[] keyBytes = Files.readAllBytes(PATH_TO_KEY);
             X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
             try {
                 KeyFactory kf = KeyFactory.getInstance("RSA");
@@ -54,7 +55,7 @@ public class ResourceServ implements Runnable{
 
     public ResourceServ(Socket client, Access<String, Resource> accessVerifier) {
         this.client = client;
-        this.accessVerifier = accessVerifier;
+        this.access = accessVerifier;
     }
 
     private JSONObject formJsonResource(Resource resource){
@@ -86,7 +87,7 @@ public class ResourceServ implements Runnable{
         urlParams.put("path", unixLikePath(path.toString()) + "/");
 
         List<Resource> accessibleResources
-                = new ArrayList<>(accessVerifier.getUserAccess(resource.getUsername(), urlParams));
+                = new ArrayList<>(access.getUserAccess(resource.getUsername(), urlParams));
         accessibleResources.stream().filter(x -> Files.exists(x.getPath()))
                 .forEach(x -> jsonObject.append("files", formJsonResource(x).toString()));
 
@@ -116,7 +117,7 @@ public class ResourceServ implements Runnable{
 
     private JSONObject getAccess(Map<String, String> urlParams)
     {
-        List<Resource> resources = accessVerifier.getUserAccess(currentUsername, urlParams);
+        List<Resource> resources = access.getUserAccess(currentUsername, urlParams);
         JSONObject accesses = new JSONObject();
         for(Resource r : resources){
             Path p = r.getPath();
@@ -149,7 +150,6 @@ public class ResourceServ implements Runnable{
         Path path = Http.getPathFromUrl(request);
         Resource resource = new Resource(Files.isDirectory(path), path, currentUsername, AccessType.READ);
         Map<String, String> urlParams = Http.parseUrlParams(request);
-        System.out.println(path);
         if((request.startsWith("resource"))) {
             if (!verifyAccess(resource)) {
                 logger.log(Level.FINE, "Access denied");
@@ -178,6 +178,8 @@ public class ResourceServ implements Runnable{
             Http.writeJSONResponse(writer, ACCESSTYPE_TOKEN_INVALID);
             return false;
         }
+
+        //Setting username here is really bad design
         setCurrentUsername(decodedJWT.getClaim("username").asString());
 
         return true;
@@ -188,17 +190,17 @@ public class ResourceServ implements Runnable{
     }
 
     private boolean verifyAccess(Resource resource){
-        return accessVerifier.hasAccess(resource);
+        return access.hasAccess(resource);
     }
 
     private void sendBytes(OutputStream rawO, Path file) throws IOException{
-        System.out.println("Sendding file...");
+        logger.finer("Sending file");
         try(InputStream fin = new BufferedInputStream(new FileInputStream(file.toString()))){
             byte[] bytes = new byte[1024];
             while (fin.read(bytes) != -1){
                 rawO.write(bytes);
             }
-            System.out.println("Flushing...");
+            logger.finer("Flushing bytes...");
             rawO.flush();
         }
     }
@@ -219,6 +221,7 @@ public class ResourceServ implements Runnable{
             logger.log(Level.FINE, "File not found");
         }
     }
+
     private void deleteFile(Path path) throws IOException{
         try {
             Files.delete(path);
@@ -235,10 +238,17 @@ public class ResourceServ implements Runnable{
             Http.writeJSONResponse(writer, DIR_NOT_EMPTY);
             return;
         }
-        accessVerifier.deleteAccess(resource);
-        writer.write(OK);
-        writer.write(baseHeader);
-        writer.flush();
+        try {
+            access.deleteAccess(resource);
+            writer.write(OK);
+            writer.write(baseHeader);
+            writer.flush();
+        }catch (Exception e){
+            logger.log(Level.WARNING, "Something bad happened deleting a file", e);
+            writer.write(ERROR400);
+            writer.write(baseHeader);
+            Http.writeJSONResponse(writer, ERROR_DELETING);
+        }
     }
 
     private void doDelete(Writer writer, String request) throws IOException{
@@ -264,8 +274,9 @@ public class ResourceServ implements Runnable{
             InputStream rawI = new BufferedInputStream(client.getInputStream());
 
             String requestLine = Http.readLine(rawI);
-            System.out.println("Request: " + requestLine);
+            logger.finer("Request = " + requestLine);
             String[] tokens = requestLine.split("\\s+" );
+            //Must be some checking of array exception
             String path = tokens[1].substring(1);
             String requestType = tokens[0];
 
@@ -273,18 +284,18 @@ public class ResourceServ implements Runnable{
             String token = getToken(header);
 
             if(verifyToken(writer, token)) {
-                System.out.println("Token exist");
+                logger.finer("Token exist");
                 switch (requestType) {
                     case "GET":
-                        System.out.println("Doing doGet...");
+                        logger.finer("Doing Get...");
                         doGet(writer, rawO, path);
                         break;
                     case "POST":
-                        System.out.println("Doing doPost...");
+                        logger.finer("Doing POST...");
                         doPost(writer, rawI, path, header);
                         break;
                     case "DELETE":
-                        System.out.println("Doing delete");
+                        logger.finer("Doing DELETE...");
                         doDelete(writer, path);
                         break;
                     default:
@@ -292,7 +303,6 @@ public class ResourceServ implements Runnable{
                         writer.flush();
                 }
             }
-
 
             writer.close();
             rawO.close();
@@ -324,7 +334,6 @@ public class ResourceServ implements Runnable{
                     fout.write(bytes, 0, result);
                     bytesRead += result;
                 }
-                System.out.println("Readed = " + bytesRead);
                 fout.flush();
             }
             writer.write(OK);
@@ -337,9 +346,10 @@ public class ResourceServ implements Runnable{
             Http.writeJSONResponse(writer, BAD_REQUEST);
         }
     }
+
     //For refactoring
     private void writeMultipart(Writer writer, String content, InputStream rawI) throws IOException{
-        System.out.println("Parsing multipart");
+        logger.finer("Parsing multipart");
 
         String boundary = content.substring(content.indexOf("boundary=") + 9);
         System.out.println("Boundary = " + boundary);
@@ -365,7 +375,7 @@ public class ResourceServ implements Runnable{
                 wroteFiles.add(fileName.substring(9));
                 System.out.println("File name = " + fileName);
                 Path path = Paths.get(fileName);
-                if(!accessVerifier.hasAccess(
+                if(!access.hasAccess(
                         new Resource(true, path.getParent(), currentUsername, AccessType.WRITE))){
                     writer.write(UNAUTHORIZED);
                     Http.writeJSONResponse(writer, ACCESS_DENIED);
@@ -377,8 +387,14 @@ public class ResourceServ implements Runnable{
                     exitNormally = false;
                     logger.log(Level.WARNING, "Can't save file", e);
                 }
-                accessVerifier.addAccess(new Resource(false,
-                        Paths.get(fileName), currentUsername, AccessType.values()));
+                try {
+                    access.addAccess(new Resource(false,
+                            Paths.get(fileName), currentUsername, AccessType.values()));
+                }catch (Exception e){
+                    logger.log(Level.WARNING, "Error adding access", e);
+                    writer.write(ERROR400);
+                    Http.writeJSONResponse(writer, ADDING_ACCESS_ERR);
+                }
             }else if(name.equalsIgnoreCase("to_dir")){
                 ByteArrayOutputStream dirStream = new ByteArrayOutputStream();
                 multipartStream.readBodyData(dirStream);
@@ -411,8 +427,14 @@ public class ResourceServ implements Runnable{
             int size = Integer.parseInt(sizeStr);
             System.out.println("Size = " + sizeStr);
             trySaveFile(writer, path, size, rawI);
+            try {
+                access.addAccess(new Resource(false, path, currentUsername, AccessType.values()));
+            }catch (Exception e){
+                logger.log(Level.WARNING, "Error adding access to file", e);
+                writer.write(ERROR400);
+                Http.writeJSONResponse(writer, ADDING_ACCESS_ERR);
+            }
             System.out.println("Success");
-            accessVerifier.addAccess(new Resource(false, path, currentUsername, AccessType.values()));
         }catch (NumberFormatException | NullPointerException e){
             logger.log(Level.WARNING, BAD_REQUEST);
             writer.write(ERROR400);
@@ -423,28 +445,24 @@ public class ResourceServ implements Runnable{
     private void doPost(Writer writer, InputStream rawI, String request, Map<String, String> header)
             throws IOException{
 
-        System.out.println(request);
-
-
         String content = header.get("Content-Type");
         if(content != null && content.startsWith("multipart/form-data") && content.contains("boundary=")){
             writeMultipart(writer, content, rawI);
-            return;
-        }
-
-        Path path = Http.getPathFromUrl(request);
-        System.out.println("Parent " + path.getParent());
-        Resource resource = new Resource(true, path.getParent(), currentUsername, AccessType.WRITE);
-        if(!verifyAccess(resource)){
-            logger.log(Level.WARNING, "Rights violated");
-            writer.write(UNAUTHORIZED);
-            Http.writeJSONResponse(writer, ACCESS_DENIED);
-        }else{
-            writeResource(writer, header, path, rawI);
+        }else {
+            //Processing simple POST with a file in body
+            Path path = Http.getPathFromUrl(request);
+            Resource resource = new Resource(true, path.getParent(), currentUsername, AccessType.WRITE);
+            if (!verifyAccess(resource)) {
+                logger.log(Level.WARNING, "Rights violated");
+                writer.write(UNAUTHORIZED);
+                Http.writeJSONResponse(writer, ACCESS_DENIED);
+            } else {
+                writeResource(writer, header, path, rawI);
+            }
         }
     }
 
-    private String getToken(Map<String, String> header) {
+    private static String getToken(Map<String, String> header) {
         if(header.containsKey("Authorization")){
             return header.get("Authorization").replace("Bearer", "")
                     .replaceAll("\\s", "");

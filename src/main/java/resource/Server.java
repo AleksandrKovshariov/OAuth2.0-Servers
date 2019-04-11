@@ -1,6 +1,7 @@
 package resource;
 
 import database.Database;
+import utils.FineLogger;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -25,17 +26,13 @@ public class Server {
 
 
     public static final String URL = "jdbc:mysql://localhost:3306/mydb?allowPublicKeyRetrieval=true&useSSL=false";
-    public static final String USERNAME = "root";
-    public static final String PASSWORD = "";
+    public static final String USERNAME = "resource";
+    public static final String PASSWORD = "cfif";
     public static final int NUMBER_OF_THREADS = 10;
 
     static{
-        ConsoleHandler handler = new ConsoleHandler();
-        handler.setLevel(Level.ALL);
-        errorLog.setLevel(Level.ALL);
-        requests.setLevel(Level.ALL);
-        errorLog.addHandler(handler);
-        requests.addHandler(handler);
+        errorLog = FineLogger.getLogger("Error");
+        requests = FineLogger.getLogger("Requests");
     }
 
 

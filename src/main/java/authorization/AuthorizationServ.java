@@ -48,7 +48,6 @@ public class AuthorizationServ implements Runnable{
             PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(encodedKey);
 
             try {
-
                 KeyFactory kf = KeyFactory.getInstance("RSA");
                 return kf.generatePrivate(keySpec);
             }catch (Exception e){
@@ -71,6 +70,7 @@ public class AuthorizationServ implements Runnable{
                 && map.containsKey("client_secret") && map.containsKey("client_id");
     }
 
+    //For testing
     private boolean authenticateUser(String userName, String password){
         return true;
     }
@@ -106,7 +106,9 @@ public class AuthorizationServ implements Runnable{
             logger.log(Level.FINER, "Sent OK");
             String token = generateToken(map.get("username"));
             writer.write(OK);
+            //For single page application
             writer.write("Access-Control-Allow-Origin:*" + NEW_LINE);
+
             Http.writeJSONResponse(writer,
                     new JSONObject().put("access_token", token)
                     .put("token_type", "bearer").toString());
@@ -130,8 +132,10 @@ public class AuthorizationServ implements Runnable{
 
             if(tokens[0].equals("POST")){
                 auth(writer, rawI);
-            }else
+            }else {
                 writer.write(NOT_IMPLEMENTED);
+                writer.flush();
+            }
             writer.close();
             rawO.close();
             rawI.close();

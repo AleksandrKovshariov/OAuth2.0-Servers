@@ -26,7 +26,9 @@ public class ServerConstants {
     public static final String ACCESSTYPE_TOKEN_NOT_EXIST = new JSONObject().put("error", "AccessType token does not exist.").toString();
     public static final String ACCESSTYPE_TOKEN_INVALID = new JSONObject().put("error", "AccessType token is invalid.").toString();
     public static final String BAD_REQUEST = new JSONObject().put("error", "Bad request").toString();
+    public static final String ADDING_ACCESS_ERR = new JSONObject().put("error", "Error adding access to file").toString();
     public static final String FILE_NOT_FOUND = new JSONObject().put("error", "File not found").toString();
+    public static final String ERROR_DELETING = new JSONObject().put("error", "Error deleting file, probably file is already deleted").toString();
     public static final String DIR_NOT_EMPTY = new JSONObject().put("error", "Folder must be empty to delete").toString();
 
 

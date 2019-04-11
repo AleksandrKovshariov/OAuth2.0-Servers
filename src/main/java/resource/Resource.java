@@ -30,10 +30,6 @@ public class Resource{
         this.username = username;
     }
 
-    public AccessType getFirstAccessType(){
-        return accessType[0];
-    }
-
     public AccessType[] getAccessTypes(){
         return accessType;
     }
