@@ -21,13 +21,13 @@ public class Server {
     private final int port;
     private final int query;
     private final InetAddress address;
-    private static Logger errorLog = Logger.getLogger("Error");
-    private static Logger requests = Logger.getLogger("Requests");
+    private static Logger errorLog;
+    private static Logger requests ;
 
 
     public static final String URL = "jdbc:mysql://localhost:3306/mydb?allowPublicKeyRetrieval=true&useSSL=false";
-    public static final String USERNAME = "resource";
-    public static final String PASSWORD = "cfif";
+    public static final String USERNAME = "root";
+    public static final String PASSWORD = "";
     public static final int NUMBER_OF_THREADS = 10;
 
     static{
