@@ -1,6 +1,5 @@
 package database;
 
-import com.mysql.jdbc.exceptions.MySQLIntegrityConstraintViolationException;
 import resource.AccessType;
 import resource.Access;
 import resource.Resource;
