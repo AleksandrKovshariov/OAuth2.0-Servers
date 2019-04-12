@@ -2,17 +2,16 @@ package resource;
 
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.List;
 import java.util.Objects;
 
 public class Resource{
-    private boolean idDir;
+    private boolean isDir;
     private AccessType[] accessType;
     private Path path;
     private String username;
 
     public boolean isDir() {
-        return idDir;
+        return isDir;
     }
 
     public Path getPath() {
@@ -23,8 +22,8 @@ public class Resource{
         return username;
     }
 
-    public Resource(boolean idDir, Path path, String username, AccessType... accessType) {
-        this.idDir = idDir;
+    public Resource(boolean isDir, Path path, String username, AccessType... accessType) {
+        this.isDir = isDir;
         this.accessType = accessType;
         this.path = path;
         this.username = username;
@@ -36,7 +35,7 @@ public class Resource{
 
     @Override
     public String toString() {
-        return "Is dir: " + idDir + " , Path: " + path + " , Username: " + username
+        return "Is dir: " + isDir + " , Path: " + path + " , Username: " + username
                 + " , AccessTypes: " + Arrays.toString(accessType);
     }
 
@@ -45,12 +44,12 @@ public class Resource{
         if (this == o) return true;
         if (!(o instanceof Resource)) return false;
         Resource resource = (Resource) o;
-        return idDir == resource.idDir &&
+        return isDir == resource.isDir &&
                 path.equals(resource.path);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(idDir, path);
+        return Objects.hash(isDir, path);
     }
 }

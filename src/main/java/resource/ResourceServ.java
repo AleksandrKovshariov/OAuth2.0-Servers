@@ -359,7 +359,7 @@ public class ResourceServ implements Runnable{
         boolean nextPart = multipartStream.skipPreamble();
         boolean wasDir       = false;
         boolean exitNormally = true;
-        String toDir;
+        String toDir = null;
         List<String> wroteFiles = new ArrayList<>();
 
         while (nextPart){
@@ -370,7 +370,7 @@ public class ResourceServ implements Runnable{
 
             if(wasDir && name.equalsIgnoreCase("file")){
                 int fileIndex = head.indexOf("filename=") + 10;
-                String fileName = ("resource/" + currentUsername + "/" +
+                String fileName = ("resource/" + toDir + "/" +
                         head.substring(fileIndex, head.indexOf("\"", fileIndex)))
                                 .replaceAll("[^a-zA-Z0-9_./-]", "");
 
