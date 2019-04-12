@@ -70,7 +70,7 @@ public class AuthorizationServ implements Runnable{
                 && map.containsKey("client_secret") && map.containsKey("client_id");
     }
 
-    //For testing
+    //For testing. Watch out synchronization issues
     private boolean authenticateUser(String userName, String password){
         return true;
     }

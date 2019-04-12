@@ -347,6 +347,7 @@ public class ResourceServ implements Runnable{
         }
     }
 
+    @SuppressWarnings("deprecated")
     //For refactoring
     private void writeMultipart(Writer writer, String content, InputStream rawI) throws IOException{
         logger.finer("Parsing multipart");
