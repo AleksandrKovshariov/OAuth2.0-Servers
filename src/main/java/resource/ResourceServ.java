@@ -274,7 +274,7 @@ public class ResourceServ implements Runnable{
             InputStream rawI = new BufferedInputStream(client.getInputStream());
 
             String requestLine = Http.readLine(rawI);
-            logger.finer("Request = " + requestLine);
+            System.out.println("Request = " + requestLine);
             String[] tokens = requestLine.split("\\s+" );
             //Must be some checking of array exception
             String path = tokens[1].substring(1);
@@ -357,15 +357,17 @@ public class ResourceServ implements Runnable{
 
         MultipartStream multipartStream = new MultipartStream(rawI, boundaryBytes);
         boolean nextPart = multipartStream.skipPreamble();
-        boolean wasDir = false;
+        boolean wasDir       = false;
         boolean exitNormally = true;
         String toDir;
         List<String> wroteFiles = new ArrayList<>();
+
         while (nextPart){
             String head = multipartStream.readHeaders();
             int nameIndex = head.indexOf("name=") + 6;
             String name = head.substring(nameIndex, head.indexOf("\"", nameIndex + 1));
             System.out.println("Name = " + name);
+
             if(wasDir && name.equalsIgnoreCase("file")){
                 int fileIndex = head.indexOf("filename=") + 10;
                 String fileName = ("resource/" + currentUsername + "/" +
@@ -373,6 +375,7 @@ public class ResourceServ implements Runnable{
                                 .replaceAll("[^a-zA-Z0-9_./-]", "");
 
                 wroteFiles.add(fileName.substring(9));
+
                 System.out.println("File name = " + fileName);
                 Path path = Paths.get(fileName);
                 if(!access.hasAccess(
@@ -394,12 +397,14 @@ public class ResourceServ implements Runnable{
                     logger.log(Level.WARNING, "Error adding access", e);
                     writer.write(ERROR400);
                     Http.writeJSONResponse(writer, ADDING_ACCESS_ERR);
+                    exitNormally = false;
+                    break;
                 }
             }else if(name.equalsIgnoreCase("to_dir")){
                 ByteArrayOutputStream dirStream = new ByteArrayOutputStream();
                 multipartStream.readBodyData(dirStream);
                 toDir = dirStream.toString();
-                System.out.println("to_dir " + toDir);
+                System.out.println("To_dir = " + toDir);
                 wasDir = true;
             }
             else {
