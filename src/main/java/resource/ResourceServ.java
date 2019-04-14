@@ -207,6 +207,7 @@ public class ResourceServ implements Runnable{
 
     private void sendFile(Writer writer, OutputStream rawO, String contentType, Path file) throws IOException{
         if(Files.exists(file) && Files.isReadable(file)) {
+            System.out.println(contentType);
             Http.writeHeader(writer, Files.size(file), contentType);
             writer.flush();
             try{

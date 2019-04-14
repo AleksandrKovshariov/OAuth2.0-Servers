@@ -102,7 +102,11 @@ public class Database implements Access<String, Resource> {
         for(String s : params.keySet()){
             switch (s){
                 case "access_type":
-                    s = " and access_type like \'%" + params.get(s) + "%\'";
+                    String[] accesses = params.get(s).split(",");
+                    StringBuilder sb = new StringBuilder();
+                    for(String str : accesses)
+                        sb.append(" and access_type like \'%").append(str).append( "%\' ");
+                    s = sb.toString();
                     break;
                 case "path":
                     String path = params.get(s);
@@ -126,7 +130,7 @@ public class Database implements Access<String, Resource> {
 
             try(PreparedStatement preparedStatement = connection.prepareStatement(userAccessQuery)){
                 preparedStatement.setString(1, name);
-
+                System.out.println(preparedStatement);
                 ResultSet resultSet = preparedStatement.executeQuery();
                 logger.finer(preparedStatement.toString());
                 while (resultSet.next()){
