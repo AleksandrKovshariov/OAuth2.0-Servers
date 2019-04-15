@@ -26,7 +26,7 @@ public class Database implements Access<String, Resource> {
             " WHERE username = ? ";
 
     private static final String addAccess =
-            "insert into Accesses(acc_path,  is_dir, username, access_type) values(?, ?, ?, ?)";
+            "insert into Accesses(acc_path,  is_dir, username, access_type) values(?, ?, ?, ?) ";
 
     private static final String deleteAccess = "delete from accesses " +
             " where acc_path = ? and is_dir = ?";
@@ -64,9 +64,8 @@ public class Database implements Access<String, Resource> {
 
     @Override
     public void addAccess(Resource resource) throws Exception {
-        try {
-            try (PreparedStatement preparedStatement = connection.prepareStatement(addAccess)){
-                preparedStatement.setString(1,  ResourceServ.unixLikePath(resource.getPath().toString()));
+            try (PreparedStatement preparedStatement = connection.prepareStatement(addAccess)) {
+                preparedStatement.setString(1, ResourceServ.unixLikePath(resource.getPath().toString()));
                 preparedStatement.setBoolean(2, Files.isDirectory(resource.getPath()));
                 preparedStatement.setString(3, resource.getUsername());
 
@@ -76,12 +75,6 @@ public class Database implements Access<String, Resource> {
                 logger.finer(preparedStatement.toString());
                 preparedStatement.execute();
             }
-
-        }catch (SQLIntegrityConstraintViolationException e){
-            //Almost always means that user overriding file
-            logger.log(Level.CONFIG, "Sqlex", e);
-        }
-
     }
 
     @Override

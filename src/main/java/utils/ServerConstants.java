@@ -31,6 +31,10 @@ public class ServerConstants {
     public static final String ERROR_DELETING = new JSONObject().put("error", "Error deleting file, probably file is already deleted").toString();
     public static final String DIR_NOT_EMPTY = new JSONObject().put("error", "Folder must be empty to delete").toString();
     public static final String ACC_FORBIDDEN = new JSONObject().put("error", "Forbidden").toString();
+    public static final String ERROR_ADDING_ACC = new JSONObject().put("error", "Error adding access user does not exist").toString();
+    public static final String USER_HAS_ACCESS = new JSONObject().put("error", "User has already possess this access").toString();
+    public static final String FILE_EXIST = new JSONObject().put("error", "File already exists, so it was overwrote").toString();
+
 
 
 

@@ -23,6 +23,8 @@ import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
+import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -343,7 +345,8 @@ public class ResourceServ implements Runnable{
             writer.write(baseHeader);
             writer.flush();
             logger.fine("Saved file to: " + path);
-        }catch (IOException e){
+        }
+        catch (IOException e){
             logger.log(Level.WARNING,"Error writing file");
             writer.write(ERROR400);
             Http.writeJSONResponse(writer, BAD_REQUEST);
@@ -382,8 +385,7 @@ public class ResourceServ implements Runnable{
 
                 System.out.println("File name = " + fileName);
                 Path path = Paths.get(fileName);
-                if(!access.hasAccess(
-                        new Resource(path.getParent(), currentUsername, AccessType.WRITE))){
+                if(!access.hasAccess(new Resource(path.getParent(), currentUsername, AccessType.WRITE))){
                     writer.write(UNAUTHORIZED);
                     Http.writeJSONResponse(writer, ACCESS_DENIED);
                     return;
@@ -396,6 +398,10 @@ public class ResourceServ implements Runnable{
                 }
                 try {
                     access.addAccess(new Resource(Paths.get(fileName), currentUsername, AccessType.values()));
+                }catch (SQLIntegrityConstraintViolationException e){
+                    logger.log(Level.WARNING, "File was overriden", e);
+                    writer.write(ERROR400);
+                    Http.writeJSONResponse(writer, FILE_EXIST);
                 }catch (Exception e){
                     logger.log(Level.WARNING, "Error adding access", e);
                     writer.write(ERROR400);
@@ -437,7 +443,11 @@ public class ResourceServ implements Runnable{
             trySaveFile(writer, path, size, rawI);
             try {
                 access.addAccess(new Resource(path, currentUsername, AccessType.values()));
-            }catch (Exception e){
+            }catch (SQLIntegrityConstraintViolationException e){
+                logger.log(Level.WARNING, "File already exist", e);
+                writer.write(ERROR400);
+                Http.writeJSONResponse(writer, FILE_EXIST);
+            } catch (Exception e){
                 logger.log(Level.WARNING, "Error adding access to file", e);
                 writer.write(ERROR400);
                 Http.writeJSONResponse(writer, ADDING_ACCESS_ERR);
@@ -477,20 +487,36 @@ public class ResourceServ implements Runnable{
                 JSONObject jsonObject = new JSONObject(str);
                 String toUser = jsonObject.get("to_user").toString();
                 String path = "resource/" + jsonObject.get("path").toString();
-                String accessType = jsonObject.get("access_type").toString();
-                Resource resource = new Resource(Paths.get(path), currentUsername, AccessType.GRANT);
+                String[] accesstypeStr = jsonObject.get("access_type").toString().split(",");
+                AccessType[] accessTypes = new AccessType[accesstypeStr.length];
+                for (int i = 0; i < accesstypeStr.length; i++)
+                    accessTypes[i] = AccessType.valueOf(accesstypeStr[i]);
+
+                Path resPath = Paths.get(path);
+                Resource resource = new Resource(resPath, currentUsername, AccessType.GRANT);
                 System.out.println(resource);
                 if(!verifyAccess(resource)){
                     writer.write(UNAUTHORIZED);
                     Http.writeJSONResponse(writer, ACCESS_DENIED);
                 }else{
                     System.out.println("Access is right, adding new access to user");
-
+                    Resource granted = new Resource(resPath, toUser, accessTypes);
+                    try{
+                        access.addAccess(granted);
+                        writer.write(OK);
+                        Http.writeJSONResponse(writer, new JSONObject().put("to_user", toUser)
+                                .put("path", path).put("access_types", Arrays.toString(accessTypes)).toString());
+                    }catch (Exception e){
+                        if(verifyAccess(granted)){
+                            writer.write(OK);
+                            Http.writeJSONResponse(writer, USER_HAS_ACCESS);
+                        }else {
+                            writer.write(ERROR400);
+                            Http.writeJSONResponse(writer, ERROR_ADDING_ACC);
+                        }
+                    }
                 }
 
-                System.out.println(toUser);
-                System.out.println(path);
-                System.out.println(accessType);
             }
             catch (JSONException e){
                 logger.log(Level.CONFIG, "Bad request", e);
