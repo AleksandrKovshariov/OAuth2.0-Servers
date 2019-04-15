@@ -4,6 +4,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.SignatureVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import org.json.JSONException;
 import org.json.JSONObject;
 import utils.FineLogger;
 import utils.Http;
@@ -13,6 +14,7 @@ import static utils.ServerConstants.*;
 import java.io.*;
 import java.net.Socket;
 import java.net.URLConnection;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.security.KeyFactory;
@@ -70,7 +72,7 @@ public class ResourceServ implements Runnable{
         }
 
         String fileName = path.getFileName().toString();
-        boolean isDir = resource.isDir();
+        boolean isDir = Files.isDirectory(path);
         String pathWithoutRes = unixLikePath(path.toString()).replaceFirst("resource/","");
         return new JSONObject()
                 .put("name", fileName)
@@ -102,7 +104,7 @@ public class ResourceServ implements Runnable{
             throws IOException{
         Path path = resource.getPath();
 
-        if(resource.isDir()){
+        if(Files.isDirectory(path)){
             sendDirectoryStructure(writer, resource, urlParams);
         }else{
             String contentType = URLConnection.getFileNameMap().getContentTypeFor(path.getFileName().toString());
@@ -125,7 +127,7 @@ public class ResourceServ implements Runnable{
                 String path = Files.isDirectory(p) ? p + "/" : p.toString();
                 path = unixLikePath(path).replaceFirst("resource/","");
                 accesses.append("access", new JSONObject().put("path", path)
-                        .put("isDir", r.isDir()).put("accessType", Arrays.toString(r.getAccessTypes())));
+                        .put("isDir", Files.isDirectory(p)).put("accessType", Arrays.toString(r.getAccessTypes())));
             }
         }
 
@@ -148,7 +150,7 @@ public class ResourceServ implements Runnable{
 
     private void doGet(Writer writer, OutputStream output, String request) throws IOException{
         Path path = Http.getPathFromUrl(request);
-        Resource resource = new Resource(Files.isDirectory(path), path, currentUsername, AccessType.READ);
+        Resource resource = new Resource(path, currentUsername, AccessType.READ);
         Map<String, String> urlParams = Http.parseUrlParams(request);
         if((request.startsWith("resource"))) {
             if (!verifyAccess(resource)) {
@@ -254,7 +256,7 @@ public class ResourceServ implements Runnable{
 
     private void doDelete(Writer writer, String request) throws IOException{
         Path path = Http.getPathFromUrl(request);
-        Resource resource = new Resource(Files.isDirectory(path), path, currentUsername, AccessType.DELETE);
+        Resource resource = new Resource(path, currentUsername, AccessType.DELETE);
         if((request.startsWith("resource"))) {
             if (!verifyAccess(resource)) {
                 logger.log(Level.WARNING, "Access denied");
@@ -381,7 +383,7 @@ public class ResourceServ implements Runnable{
                 System.out.println("File name = " + fileName);
                 Path path = Paths.get(fileName);
                 if(!access.hasAccess(
-                        new Resource(true, path.getParent(), currentUsername, AccessType.WRITE))){
+                        new Resource(path.getParent(), currentUsername, AccessType.WRITE))){
                     writer.write(UNAUTHORIZED);
                     Http.writeJSONResponse(writer, ACCESS_DENIED);
                     return;
@@ -393,8 +395,7 @@ public class ResourceServ implements Runnable{
                     logger.log(Level.WARNING, "Can't save file", e);
                 }
                 try {
-                    access.addAccess(new Resource(false,
-                            Paths.get(fileName), currentUsername, AccessType.values()));
+                    access.addAccess(new Resource(Paths.get(fileName), currentUsername, AccessType.values()));
                 }catch (Exception e){
                     logger.log(Level.WARNING, "Error adding access", e);
                     writer.write(ERROR400);
@@ -435,7 +436,7 @@ public class ResourceServ implements Runnable{
             System.out.println("Size = " + sizeStr);
             trySaveFile(writer, path, size, rawI);
             try {
-                access.addAccess(new Resource(false, path, currentUsername, AccessType.values()));
+                access.addAccess(new Resource(path, currentUsername, AccessType.values()));
             }catch (Exception e){
                 logger.log(Level.WARNING, "Error adding access to file", e);
                 writer.write(ERROR400);
@@ -456,7 +457,7 @@ public class ResourceServ implements Runnable{
         } else {
             //Processing simple POST with a file in body
             Path path = Http.getPathFromUrl(request);
-            Resource resource = new Resource(true, path.getParent(), currentUsername, AccessType.WRITE);
+            Resource resource = new Resource(path.getParent(), currentUsername, AccessType.WRITE);
             if (!verifyAccess(resource)) {
                 logger.log(Level.WARNING, "Rights violated");
                 writer.write(UNAUTHORIZED);
@@ -467,6 +468,43 @@ public class ResourceServ implements Runnable{
         }
     }
 
+    private void addAccess(Writer writer, InputStream rawI, Map<String, String> header) throws IOException{
+        try {
+            String strLength = header.get("Content-Length");
+            int length = Integer.parseInt(strLength);
+            String str = new String(Http.readBodyBytes(rawI, length), StandardCharsets.UTF_8);
+            try {
+                JSONObject jsonObject = new JSONObject(str);
+                String toUser = jsonObject.get("to_user").toString();
+                String path = "resource/" + jsonObject.get("path").toString();
+                String accessType = jsonObject.get("access_type").toString();
+                Resource resource = new Resource(Paths.get(path), currentUsername, AccessType.GRANT);
+                System.out.println(resource);
+                if(!verifyAccess(resource)){
+                    writer.write(UNAUTHORIZED);
+                    Http.writeJSONResponse(writer, ACCESS_DENIED);
+                }else{
+                    System.out.println("Access is right, adding new access to user");
+
+                }
+
+                System.out.println(toUser);
+                System.out.println(path);
+                System.out.println(accessType);
+            }
+            catch (JSONException e){
+                logger.log(Level.CONFIG, "Bad request", e);
+                writer.write(ERROR400);
+                Http.writeJSONResponse(writer, BAD_REQUEST);
+            }
+
+        }catch (NullPointerException | NumberFormatException | IOException e){
+            writer.write(ERROR400);
+            Http.writeJSONResponse(writer, BAD_REQUEST);
+            logger.log(Level.CONFIG, "404 addAccess", e);
+        }
+
+    }
     private void doPost(Writer writer, InputStream rawI, String request, Map<String, String> header)
             throws IOException{
 
@@ -474,7 +512,8 @@ public class ResourceServ implements Runnable{
             System.out.println("Saving resource");
             saveResource(writer, rawI, request, header);
         }else if(request.startsWith("access")){
-
+            System.out.println("Adding access");
+            addAccess(writer, rawI, header);
         }else{
             writer.write(FORBIDDEN);
             Http.writeJSONResponse(writer, ACC_FORBIDDEN);

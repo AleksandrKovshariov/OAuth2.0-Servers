@@ -67,7 +67,7 @@ public class Database implements Access<String, Resource> {
         try {
             try (PreparedStatement preparedStatement = connection.prepareStatement(addAccess)){
                 preparedStatement.setString(1,  ResourceServ.unixLikePath(resource.getPath().toString()));
-                preparedStatement.setBoolean(2, resource.isDir());
+                preparedStatement.setBoolean(2, Files.isDirectory(resource.getPath()));
                 preparedStatement.setString(3, resource.getUsername());
 
                 String access_type = Arrays.toString(resource.getAccessTypes())
@@ -90,7 +90,7 @@ public class Database implements Access<String, Resource> {
         try (PreparedStatement preparedStatement = connection.prepareStatement(deleteAccess)){
             String unixLikePath = ResourceServ.unixLikePath(resource.getPath().toString());
             preparedStatement.setString(1,unixLikePath);
-            preparedStatement.setBoolean(2, resource.isDir());
+            preparedStatement.setBoolean(2, Files.isDirectory(resource.getPath()));
             logger.finer(preparedStatement.toString());
             preparedStatement.execute();
         }
@@ -141,7 +141,7 @@ public class Database implements Access<String, Resource> {
                     for (int i = 0; i < accessTypes.length; i++) {
                         accessTypes[i] = AccessType.valueOf(accessTypesStr[i]);
                     }
-                    Resource resource = new Resource(isDir, path, name, accessTypes);
+                    Resource resource = new Resource(path, name, accessTypes);
                     list.add(resource);
                 }
 
