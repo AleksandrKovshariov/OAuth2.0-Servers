@@ -449,13 +449,11 @@ public class ResourceServ implements Runnable{
         }
     }
 
-    private void doPost(Writer writer, InputStream rawI, String request, Map<String, String> header)
-            throws IOException{
-
+    private void saveResource(Writer writer, InputStream rawI, String request, Map<String, String> header) throws IOException{
         String content = header.get("Content-Type");
-        if(content != null && content.startsWith("multipart/form-data") && content.contains("boundary=")){
+        if (content != null && content.startsWith("multipart/form-data") && content.contains("boundary=")) {
             writeMultipart(writer, content, rawI);
-        }else {
+        } else {
             //Processing simple POST with a file in body
             Path path = Http.getPathFromUrl(request);
             Resource resource = new Resource(true, path.getParent(), currentUsername, AccessType.WRITE);
@@ -466,6 +464,20 @@ public class ResourceServ implements Runnable{
             } else {
                 writeResource(writer, header, path, rawI);
             }
+        }
+    }
+
+    private void doPost(Writer writer, InputStream rawI, String request, Map<String, String> header)
+            throws IOException{
+
+        if(request.startsWith("resource")) {
+            System.out.println("Saving resource");
+            saveResource(writer, rawI, request, header);
+        }else if(request.startsWith("access")){
+
+        }else{
+            writer.write(FORBIDDEN);
+            Http.writeJSONResponse(writer, ACC_FORBIDDEN);
         }
     }
 
