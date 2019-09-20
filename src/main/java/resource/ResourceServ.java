@@ -90,6 +90,9 @@ public class ResourceServ implements Runnable{
         Path path = resource.getPath();
         urlParams.put("path", unixLikePath(path.toString()) + "/");
 
+        System.out.println("HERERERERERERE");
+        System.out.println(urlParams.get("path"));
+
         List<Resource> accessibleResources
                 = new ArrayList<>(access.getUserAccess(resource.getUsername(), urlParams));
         accessibleResources.stream().filter(x -> Files.exists(x.getPath()))
