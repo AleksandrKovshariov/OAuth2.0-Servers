@@ -27,7 +27,7 @@ public class Server {
 
     public static final String URL = "jdbc:mysql://localhost:3306/mydb?allowPublicKeyRetrieval=true&useSSL=false";
     public static final String USERNAME = "root";
-    public static final String PASSWORD = "";
+    public static final String PASSWORD = "cfif";
     public static final int NUMBER_OF_THREADS = 10;
 
     static{

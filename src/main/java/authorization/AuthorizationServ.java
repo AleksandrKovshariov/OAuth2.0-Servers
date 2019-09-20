@@ -39,8 +39,8 @@ public class AuthorizationServ implements Runnable{
         try {
             String privateKeyString;
             privateKeyString = new String(Files.readAllBytes(PRIVATE_KEY_PATH), StandardCharsets.UTF_8);
-            privateKeyString = privateKeyString.replaceAll("-----BEGIN PRIVATE KEY-----\n", "");
-            privateKeyString = privateKeyString.replaceAll("-----END PRIVATE KEY-----\n", "");
+            privateKeyString = privateKeyString.replaceAll("-----BEGIN PRIVATE KEY-----", "");
+            privateKeyString = privateKeyString.replaceAll("-----END PRIVATE KEY-----", "");
             privateKeyString = privateKeyString.replaceAll("\\s", "");
 
 
